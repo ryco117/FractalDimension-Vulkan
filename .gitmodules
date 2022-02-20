@@ -1,0 +1,3 @@
+[submodule "VulkanSharp"]
+	path = VulkanSharp
+	url = https://github.com/mono/VulkanSharp
