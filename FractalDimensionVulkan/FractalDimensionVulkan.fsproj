@@ -18,6 +18,8 @@
     <Compile Include="Engine\Pipeline.fs" />
     <Compile Include="Engine\Swapchain.fs" />
     <Compile Include="Engine\Renderer.fs" />
+    <Compile Include="CubeFillingCurve.fs" />
+    <Compile Include="EzSound.fs" />
     <Compile Include="AppState.fs" />
     <Compile Include="RenderSystem.fs" />
     <Compile Include="Program.fs" />

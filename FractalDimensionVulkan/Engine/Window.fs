@@ -5,22 +5,22 @@ open System.Windows.Forms
 open Vulkan
 open Vulkan.Windows
 
-let primaryScreenDimensions () =
-    let screen = Screen.PrimaryScreen.Bounds
-    screen.Width, screen.Height
-
 type EngineWindow (width: int, height: int, title: string) as self =
     inherit Form (Text = title, Size = System.Drawing.Size (width, height), FormBorderStyle = FormBorderStyle.Sizable)
 
+    // Ensure user-defined paint-events and set opaque fill
     do self.SetStyle (ControlStyles.UserPaint + ControlStyles.Opaque, true)
     do self.UpdateStyles ()
     
+    // Define optional event handlers
     let mutable (drawFunction: (unit -> unit) option) = None
     let mutable (tockFunction: (unit -> unit) option) = None
-    let mutable (handleKeyDown: (KeyEventArgs -> unit) option) = None
-    let mutable (handleKeyUp: (KeyEventArgs -> unit) option) = None
 
     let mutable fullscreen = false
+
+    let primaryScreenDimensions () =
+        let screen = Screen.PrimaryScreen.Bounds
+        screen.Width, screen.Height
 
     member this.CreateWindowSurface (instance: Instance) =
         let info = new Windows.Win32SurfaceCreateInfoKhr  (Hwnd = this.Handle, Hinstance = Process.GetCurrentProcess().Handle)
@@ -39,14 +39,6 @@ type EngineWindow (width: int, height: int, title: string) as self =
         with get () = tockFunction
         and set func = tockFunction <- func
 
-    member _.HandleKeyDown
-        with get () = handleKeyDown
-        and set func = handleKeyDown <- func
-
-    member _.HandleKeyUp
-        with get () = handleKeyUp
-        and set func = handleKeyUp <- func
-
     member _.ToggleFullscreen () =
         fullscreen <- not fullscreen
         if fullscreen then
@@ -58,16 +50,6 @@ type EngineWindow (width: int, height: int, title: string) as self =
         else
             self.FormBorderStyle <- FormBorderStyle.Sizable
             self.Extent <- Extent2D (Width = uint32 width, Height = uint32 height)
-            
-    override _.OnKeyDown args =
-        match handleKeyDown with
-        | Some func -> func args
-        | None -> ()
-
-    override _.OnKeyUp args =
-        match handleKeyUp with
-        | Some func -> func args
-        | None -> ()
 
     override _.OnPaintBackground _ = ()
 

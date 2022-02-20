@@ -11,7 +11,7 @@ let DEBUG = true
 
 [<EntryPoint>]
 let main _ =
-    use window = new EngineWindow (600, 400, "Volcano")
+    use window = new EngineWindow (600, 400, "FractalDimension")
     use device = new EngineDevice (window)
     use renderer = new EngineRenderer (window, device)
     let renderSystem = new RenderSystem (device, renderer.SwapchainRenderPass)
@@ -36,7 +36,6 @@ let main _ =
             renderer.EndSwapchainRenderPass commandBuffer
             renderer.EndFrame ()
         | None -> ()
-
         window.Invalidate ()    // Windows.Forms method to request another redraw
     window.DrawFunction <- Some drawFunc
 
@@ -45,7 +44,7 @@ let main _ =
         | Keys.Escape -> exit 0
         | Keys.F11 -> window.ToggleFullscreen ()
         | _ -> ()
-    window.HandleKeyDown <- Some handleKeyDown
+    window.KeyDown.Add handleKeyDown
 
     // Execute the run-loop
     Application.Run window

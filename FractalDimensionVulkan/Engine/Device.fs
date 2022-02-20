@@ -5,7 +5,7 @@ open Vulkan
 
 open EngineWindow
 
-let private DEBUG = true
+let private DEBUG = false
 let internal validationLayers = if DEBUG then [|"VK_LAYER_KHRONOS_validation"|] else Array.empty
 let internal deviceExtensions = [|"VK_KHR_swapchain"|]
 let internal requiredInstanceExtensions =
@@ -17,7 +17,7 @@ let internal requiredInstanceExtensions =
 
 let internal debugCallback (severity: DebugReportFlagsExt) (msgType: DebugReportObjectTypeExt) (objectHandle: uint64) (location: nativeint) (messageCode: int) (layerPrefix: nativeint) (message: nativeint) (userData: nativeint) =
     let str = $"%s{severity.ToString()}: %s{Marshal.PtrToStringAnsi message}"
-    Printf.eprintf "%s" str
+    printfn $"%s{str}"
     System.Diagnostics.Debug.WriteLine str
     Bool32.op_Implicit true
 
@@ -33,13 +33,13 @@ type EngineDevice (window: EngineWindow) =
         if DEBUG && not (checkValidationLayerSupport ()) then
             raise (System.Exception "Validation layers requested, but not available!")
         use appInfo =
-            let version = Version.Make (1u, 1u, 0u)
+            let version = Version.Make (1u, 0u, 0u)
             new ApplicationInfo (
-                ApplicationName = "Voxel-Flight-Simulator",
+                ApplicationName = "FractalDimension",
                 ApplicationVersion = version,
                 EngineName = "No Engine",
                 EngineVersion = version,
-                ApiVersion = version
+                ApiVersion = Version.Make (1u, 1u, 0u)
             )
         let createInfo =
             new InstanceCreateInfo (
@@ -49,7 +49,8 @@ type EngineDevice (window: EngineWindow) =
         new Instance (createInfo)
 
     let debugMessenger = Instance.DebugReportCallback (debugCallback)
-    do instance.EnableDebug debugMessenger
+    do if DEBUG then
+        instance.EnableDebug debugMessenger
 
     // Create Surface second
     let surface = window.CreateWindowSurface instance
@@ -78,7 +79,7 @@ type EngineDevice (window: EngineWindow) =
             match findQueueFamilies device with
             | Some _, Some _ ->
                 let availableExtensions = Array.map (fun (prop: ExtensionProperties) -> prop.ExtensionName) (device.EnumerateDeviceExtensionProperties "")
-                if DEBUG || true then
+                if DEBUG then
                     printfn $"Avaliable extensions for %s{device.GetProperties().DeviceName}"
                     Array.iter (fun ext -> printfn $"%s{ext}") availableExtensions
                 (Set.intersect requiredExts (Set.ofArray availableExtensions)).Count = requiredExts.Count &&
