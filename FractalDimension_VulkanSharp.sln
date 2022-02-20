@@ -4,6 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.2.32210.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FractalDimensionVulkan", "FractalDimensionVulkan\FractalDimensionVulkan.fsproj", "{6390B23B-DACF-45CB-B952-B4AA72718B67}"
+	ProjectSection(ProjectDependencies) = postProject
+		{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C} = {15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}
+		{9E914493-2F70-4F34-8BD5-48185663EC03} = {9E914493-2F70-4F34-8BD5-48185663EC03}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vulkan", "VulkanSharp\src\Vulkan\Vulkan.csproj", "{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vulkan.Windows", "VulkanSharp\src\Platforms\Windows\Vulkan.Windows.csproj", "{9E914493-2F70-4F34-8BD5-48185663EC03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generator", "VulkanSharp\tools\Generator\Generator.csproj", "{09F60593-810A-491C-84FB-A9848A182E6D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +25,18 @@ Global
 		{6390B23B-DACF-45CB-B952-B4AA72718B67}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6390B23B-DACF-45CB-B952-B4AA72718B67}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6390B23B-DACF-45CB-B952-B4AA72718B67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E914493-2F70-4F34-8BD5-48185663EC03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E914493-2F70-4F34-8BD5-48185663EC03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E914493-2F70-4F34-8BD5-48185663EC03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E914493-2F70-4F34-8BD5-48185663EC03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09F60593-810A-491C-84FB-A9848A182E6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09F60593-810A-491C-84FB-A9848A182E6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09F60593-810A-491C-84FB-A9848A182E6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09F60593-810A-491C-84FB-A9848A182E6D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

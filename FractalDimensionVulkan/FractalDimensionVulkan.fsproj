@@ -2,11 +2,35 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="shaders\ray_march.frag" />
+    <None Include="shaders\quad.vert" />
+    <Compile Include="Engine\Helpers.fs" />
+    <Compile Include="Engine\Maths.fs" />
+    <Compile Include="Engine\Window.fs" />
+    <Compile Include="Engine\Device.fs" />
+    <Compile Include="Engine\Buffer.fs" />
+    <Compile Include="Engine\Model.fs" />
+    <Compile Include="Engine\Pipeline.fs" />
+    <Compile Include="Engine\Swapchain.fs" />
+    <Compile Include="Engine\Renderer.fs" />
+    <Compile Include="AppState.fs" />
+    <Compile Include="RenderSystem.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Core" Version="2.0.0" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VulkanSharp\src\Platforms\Windows\Vulkan.Windows.csproj" />
+    <ProjectReference Include="..\VulkanSharp\src\Vulkan\Vulkan.csproj" />
   </ItemGroup>
 
 </Project>
