@@ -21,20 +21,15 @@ open NAudio.Wave
 open NAudio.CoreAudioApi
 open NAudio.Dsp
 
-let DualRealToComplex (samples: float32[]) =
-    Array.init
-        (samples.Length / 2)
-        (fun i ->
-            let mutable z = Complex()
-            // Mix stereo to mono
-            z.X <- (samples[2 * i] + samples[2 * i + 1]) / 2.f
-            // Only left
-            //z.X <- samples[2 * i]
-            // Only right
-            //z.X <- samples[2 * i + 1]
-            z)
+let internal dualRealToComplex (samples: float32[]) =
+    fun i ->
+        let mutable z = Complex()
+        // Mix stereo to mono
+        z.X <- (samples[2 * i] + samples[2 * i + 1]) / 2.f
+        z
+    |> Array.init (samples.Length / 2)
 
-type CustomCapture() =
+type internal CustomCapture() =
     inherit WasapiCapture(WasapiLoopbackCapture.GetDefaultLoopbackCaptureDevice (), false, 100) with
     override _.GetAudioClientStreamFlags () = AudioClientStreamFlags.Loopback
 
@@ -49,7 +44,7 @@ type AudioOutStreamer(onDataAvail, onClose) =
         else
             let samplesReal = Array.zeroCreate<float32> (eventArgs.BytesRecorded / bytesPerSample)
             System.Buffer.BlockCopy(eventArgs.Buffer, 0, samplesReal, 0, eventArgs.BytesRecorded)
-            let complex = DualRealToComplex samplesReal
+            let complex = dualRealToComplex samplesReal
             let logSize =
                 let rec log2 acc = function
                 | 1 -> acc
@@ -82,8 +77,8 @@ type AudioOutStreamer(onDataAvail, onClose) =
 
     member _.RecordingState = capture.CaptureState
     member _.SamplingRate = capture.WaveFormat.SampleRate
-    member _.Stopped () = capture.CaptureState =  CaptureState.Stopped
-    member _.Capturing () = capture.CaptureState =  CaptureState.Capturing
+    member _.Stopped () = capture.CaptureState = CaptureState.Stopped
+    member _.Capturing () = capture.CaptureState = CaptureState.Capturing
 
     member _.StartCapturing () =
         match capture.CaptureState with

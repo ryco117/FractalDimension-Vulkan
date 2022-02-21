@@ -12,9 +12,8 @@ type EngineWindow (width: int, height: int, title: string) as self =
     do self.SetStyle (ControlStyles.UserPaint + ControlStyles.Opaque, true)
     do self.UpdateStyles ()
     
-    // Define optional event handlers
+    // Define configurable draw function
     let mutable (drawFunction: (unit -> unit) option) = None
-    let mutable (tockFunction: (unit -> unit) option) = None
 
     let mutable fullscreen = false
 
@@ -35,10 +34,6 @@ type EngineWindow (width: int, height: int, title: string) as self =
         with get () = drawFunction
         and set func = drawFunction <- func
 
-    member _.TockFunction
-        with get () = tockFunction
-        and set func = tockFunction <- func
-
     member _.ToggleFullscreen () =
         fullscreen <- not fullscreen
         if fullscreen then
@@ -54,9 +49,6 @@ type EngineWindow (width: int, height: int, title: string) as self =
     override _.OnPaintBackground _ = ()
 
     override _.OnPaint _args =
-        match tockFunction with
-        | None -> ()
-        | Some tockFunc -> tockFunc ()
         if self.Visible then
             match drawFunction with
             | Some drawFunc -> drawFunc ()

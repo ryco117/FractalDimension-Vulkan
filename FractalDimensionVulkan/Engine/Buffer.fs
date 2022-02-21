@@ -4,19 +4,19 @@ open Vulkan
 
 open EngineDevice
 
-type EngineBuffer (device: EngineDevice, instanceSize: int, instanceCount: int, usageFlags: BufferUsageFlags, memoryPropertyFlags: MemoryPropertyFlags, ?minOffsetAlignmentOpt: int) =
+type EngineBuffer (device: EngineDevice, instanceSize: int, instanceCount: int, usageFlags: BufferUsageFlags, memoryPropertyFlags: MemoryPropertyFlags, ?minOffsetAlignmentOpt: DeviceSize) =
     let alignmentSize =
-        let alignment = Option.defaultValue 1 minOffsetAlignmentOpt
-        if alignment > 1 then
-            // Ensure size requested is smallest multiple of alignment 
-            // that is greater than the instance size.
-            let adjust = alignment - (instanceSize % alignment)
-            if adjust = alignment then
-                instanceSize
+        match minOffsetAlignmentOpt with
+        | Some size ->
+            let alignment = DeviceSize.op_Implicit size |> int
+            if alignment > 1 then
+                // Ensure size requested is smallest multiple of alignment (power of 2)
+                // that is greater than the instance size.
+                let mask = alignment - 1
+                (instanceSize + mask) &&& ~~~mask
             else
-                instanceSize + adjust
-        else
-            instanceSize
+                instanceSize
+        | None -> instanceSize
     let bufferSize = alignmentSize * instanceCount
     let buffer, memory =
         device.CreateBuffer (DeviceSize.op_Implicit bufferSize) usageFlags memoryPropertyFlags
@@ -49,9 +49,12 @@ type EngineBuffer (device: EngineDevice, instanceSize: int, instanceCount: int, 
 
     member _.Unmap = unmap
 
-    member _.WriteToBuffer (transferToPtr: nativeint*int -> unit, ?offsetOpt: int) =
-        let memOffset = System.IntPtr.Add (mappedPtr, Option.defaultValue 0 offsetOpt)
-        transferToPtr (memOffset, alignmentSize)
+    member _.WriteToBuffer (transferToPtr: nativeint -> unit, ?offsetOpt: int) =
+        let pointer =
+            match offsetOpt with
+            | Some offset -> if offset > 0 then System.IntPtr.Add (mappedPtr, offset) else mappedPtr
+            | None -> mappedPtr
+        transferToPtr pointer
 
     member _.Flush (?sizeOpt: int, ?offsetOpt: int) =
         let size =
@@ -88,7 +91,7 @@ type EngineBuffer (device: EngineDevice, instanceSize: int, instanceCount: int, 
             | None -> Helpers.deviceSizeZero
         new DescriptorBufferInfo (Buffer = buffer, Offset = offset, Range = size)
 
-    member self.WriteToIndex (transferToPtr: nativeint*int -> unit) (index: int) = self.WriteToBuffer (transferToPtr, index * alignmentSize)
+    member self.WriteToIndex (transferToPtr: nativeint -> unit) (index: int) = self.WriteToBuffer (transferToPtr, index * alignmentSize)
     member self.FlushIndex (index: int) = self.Flush (alignmentSize, index * alignmentSize)
     member self.InvalidateIndex (index: int) = self.Invalidate (alignmentSize, index * alignmentSize)
     member self.DescriptorInfoForIndex (index: int) = self.DescriptorInfo (alignmentSize, index * alignmentSize)

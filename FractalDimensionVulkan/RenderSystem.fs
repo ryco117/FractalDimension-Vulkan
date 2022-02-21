@@ -1,4 +1,21 @@
-﻿module RenderSystem
+﻿(*
+This file is part of FractalDimension
+
+FractalDimension is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+FractalDimension is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with FractalDimension. If not, see <https://www.gnu.org/licenses/>.
+*)
+
+module RenderSystem
 
 open Vulkan
 
@@ -6,32 +23,6 @@ open EngineDevice
 open EnginePipeline
 
 open AppState
-
-[<System.Runtime.InteropServices.StructLayout (System.Runtime.InteropServices.LayoutKind.Explicit)>]
-type PushConstantData =
-    struct
-        [<System.Runtime.InteropServices.FieldOffset 0>]
-        val cameraPosition: System.Numerics.Vector3
-        [<System.Runtime.InteropServices.FieldOffset 12>]
-        val time: float32
-        [<System.Runtime.InteropServices.FieldOffset 16>]
-        val cameraQuaternion: EngineMaths.Vector4
-        [<System.Runtime.InteropServices.FieldOffset 32>]
-        val aspectRatio: float32
-        new (time', aspectRatio') = {
-            cameraPosition = demoCameraPosition time'
-            time = time'
-            cameraQuaternion = demoCameraQuaternion time'
-            aspectRatio = aspectRatio'}
-        new (cameraPosition', cameraQuaternion', time', aspectRatio') = {
-            cameraPosition = cameraPosition'
-            time = time'
-            cameraQuaternion = cameraQuaternion'
-            aspectRatio = aspectRatio'}
-    end
-let internal pushConstantSize = sizeof<PushConstantData>
-
-let private DEBUG = true
 
 type RenderSystem (device: EngineDevice, initialRenderPass: RenderPass) =
     (*let descriptorPool =
@@ -81,8 +72,8 @@ type RenderSystem (device: EngineDevice, initialRenderPass: RenderPass) =
     do updateDescriptorSets ()*)
 
     let pipelineLayout =
-        assert (device.Properties.Limits.MaxPushConstantsSize >= uint32 pushConstantSize)
-        let pushConstantRange = PushConstantRange (StageFlags = ShaderStageFlags.Fragment, Offset = 0u, Size = uint32 pushConstantSize)
+        assert (device.Properties.Limits.MaxPushConstantsSize >= pushConstantSize)
+        let pushConstantRange = PushConstantRange (StageFlags = ShaderStageFlags.Fragment, Offset = 0u, Size = pushConstantSize)
         let pipelineCreateInfo =
             new PipelineLayoutCreateInfo (
                 PushConstantRanges = [|pushConstantRange|],
@@ -104,16 +95,10 @@ type RenderSystem (device: EngineDevice, initialRenderPass: RenderPass) =
             device.Device.DestroyDescriptorPool descriptorPool*)
             device.Device.DestroyPipelineLayout pipelineLayout
 
-    member _.RenderGameObjects buffer (state: State) aspectRatio =
+    member _.RenderGameObjects (buffer: CommandBuffer) (state: State) =
         pipeline.Bind buffer
         //buffer.CmdBindDescriptorSet (PipelineBindPoint.Graphics, pipelineLayout, 0u, descriptorSet, System.Nullable ())
-        let mutable structure =
-            let time = float32 state.upTime.Elapsed.TotalSeconds
-            if DEBUG then
-                PushConstantData (time, aspectRatio)
-            else
-                PushConstantData (state.cameraPosition, state.cameraQuaternion, time, aspectRatio)
-        buffer.CmdPushConstants (pipelineLayout, ShaderStageFlags.Fragment, 0u, uint32 pushConstantSize, NativeInterop.NativePtr.toNativeInt &&structure)
+        buffer.CmdPushConstants (pipelineLayout, ShaderStageFlags.Fragment, 0u, pushConstantSize, NativeInterop.NativePtr.toNativeInt &&state.pushConstants)
         buffer.CmdDraw (4u, 1u, 0u, 0u)
         (*model.Bind buffer
         model.Draw buffer*)

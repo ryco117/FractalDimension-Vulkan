@@ -1,4 +1,21 @@
-﻿module CubeFillingCurve
+﻿(*
+This file is part of FractalDimension
+
+FractalDimension is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+FractalDimension is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with FractalDimension. If not, see <https://www.gnu.org/licenses/>.
+*)
+
+module CubeFillingCurve
 
 // Define vertices of a cube as a type
 type internal Vertex =
@@ -103,5 +120,5 @@ let curveToCubeN n x =
     match f n x with
     | x, y, z -> System.Numerics.Vector3 (float32 x, float32 y, float32 z)
 
-// Same as `curveToCubeN` but with default depth of 4
-let curveToCube = curveToCubeN 4
+// Same as `curveToCubeN` but with default depth of 8
+let curveToCube = curveToCubeN 8

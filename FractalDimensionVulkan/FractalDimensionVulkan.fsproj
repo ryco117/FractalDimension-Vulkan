@@ -4,6 +4,18 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <AnalysisLevel>6.0-recommended</AnalysisLevel>
+    <ApplicationIcon>FractalDimensionLogo.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OtherFlags>/warnon:1182 /warnon:3366 /warnon:52 --warnaserror+:193,1182</OtherFlags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OtherFlags>/warnon:1182 /warnon:3366 /warnon:52 --warnaserror+:193,1182</OtherFlags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,12 +30,16 @@
     <Compile Include="Engine\Pipeline.fs" />
     <Compile Include="Engine\Swapchain.fs" />
     <Compile Include="Engine\Renderer.fs" />
+    <Content Include="FractalDimensionLogo.ico" />
     <Compile Include="CubeFillingCurve.fs" />
     <Compile Include="EzSound.fs" />
-    <Compile Include="AppState.fs" />
+    <Compile Include="Config.fs" />
+    <Compile Include="State.fs" />
     <Compile Include="RenderSystem.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+
+  <ItemGroup />
 
   <ItemGroup>
     <PackageReference Include="NAudio.Core" Version="2.0.0" />

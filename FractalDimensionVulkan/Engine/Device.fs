@@ -15,7 +15,7 @@ let internal requiredInstanceExtensions =
     else
         ext
 
-let internal debugCallback (severity: DebugReportFlagsExt) (msgType: DebugReportObjectTypeExt) (objectHandle: uint64) (location: nativeint) (messageCode: int) (layerPrefix: nativeint) (message: nativeint) (userData: nativeint) =
+let internal debugCallback (severity: DebugReportFlagsExt) (_msgType: DebugReportObjectTypeExt) (_objectHandle: uint64) (_location: nativeint) (_messageCode: int) (_layerPrefix: nativeint) (message: nativeint) (_userData: nativeint) =
     let str = $"%s{severity.ToString()}: %s{Marshal.PtrToStringAnsi message}"
     printfn $"%s{str}"
     System.Diagnostics.Debug.WriteLine str
@@ -48,8 +48,8 @@ type EngineDevice (window: EngineWindow) =
                 EnabledLayerNames = validationLayers)
         new Instance (createInfo)
 
-    let debugMessenger = Instance.DebugReportCallback (debugCallback)
     do if DEBUG then
+        let debugMessenger = Instance.DebugReportCallback (debugCallback)
         instance.EnableDebug debugMessenger
 
     // Create Surface second
@@ -209,18 +209,6 @@ type EngineDevice (window: EngineWindow) =
         let copyRegion = BufferCopy (Size = size)
         commandBuffer.CmdCopyBuffer (srcBuffer, dstBuffer, copyRegion)
         endSingleTimeCommands commandBuffer
-
-    member self.CreateLocalBufferWithTransfer (buffSize: DeviceSize) (usage: BufferUsageFlags) (transferToPtr: nativeint -> unit) =
-        let stagingBuffer, stagingBufferMemory =
-            self.CreateBuffer buffSize BufferUsageFlags.TransferSrc (MemoryPropertyFlags.HostVisible + MemoryPropertyFlags.HostCoherent)
-        let memPtr = self.Device.MapMemory (stagingBufferMemory, Helpers.deviceSizeZero, buffSize)
-        transferToPtr memPtr
-        self.Device.UnmapMemory stagingBufferMemory
-        let buffer, memory = self.CreateBuffer buffSize (usage + BufferUsageFlags.TransferDst) MemoryPropertyFlags.DeviceLocal
-        self.CopyBuffer stagingBuffer buffer buffSize
-        self.Device.DestroyBuffer stagingBuffer
-        self.Device.FreeMemory stagingBufferMemory
-        buffer, memory
 
     interface System.IDisposable with override _.Dispose () = cleanup ()
     override self.Finalize () = cleanup ()
