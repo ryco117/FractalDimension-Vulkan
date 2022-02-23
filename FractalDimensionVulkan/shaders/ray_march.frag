@@ -1,3 +1,20 @@
+/*
+This file is part of FractalDimension
+
+FractalDimension is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+FractalDimension is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with FractalDimension. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #version 450
 layout (location = 0) in vec2 coord;
 
@@ -108,11 +125,11 @@ float distanceEstimator(vec3 t)
 		t *= reScale;
 		t = vec3(boundReflect(t.x, 10.0), boundReflect(t.y, 10.0), boundReflect(t.z, 10.0));
 		vec3 s = t;
-		float power = 9.0 + 3.0*cos(push.time / 8.0);
+		float power = 9. + 2.0*boundReflect(0.12*push.time + 1.0, 1.0);
 		float dr = 1.0;
 		float r = 0.0;
 
-		mat3 colorRotato = buildRot3(normalize(push.smoothMids), 0.05*push.time);
+		mat3 colorRotato = buildRot3(normalize(push.smoothMids), 0.75*push.time);
 
 		for(int i = 0; i < maxIterations; i++) {
 			r = length(s);
@@ -130,19 +147,17 @@ float distanceEstimator(vec3 t)
 			s = r*vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
 			s += t;
 
-			//orbitTrap.xyz = min(orbitTrap.xyz, abs(s - vec3(sin(push.time), cos(push.time), sin(push.time/4.0)*cos(push.time/4.0))/1.75));
-
-			orbitTrap.xyz = min(orbitTrap.xyz, abs(s - ((push.reactiveHigh + push.reactiveMids)/1.75) * colorRotato));
+			orbitTrap.xyz = min(orbitTrap.xyz, abs((s - (push.reactiveHigh + push.reactiveBass)/1.75) * colorRotato));
 		}
 		return min(0.5*log(r)*r/dr, 3.5) / reScale;
 	}
 	else if(push.deType == 3) {
 		const int maxIterations = 4;
-		const float reScale = 2.0;
+		const float reScale = 1.5;
 		t *= reScale;
 		vec3 s = t;
 
-		float anim = 1.25 + 0.08*sin(0.5*push.time);
+		float anim = 1.12 + 0.12*sin(0.2*push.time);
 		float scale = 1.0;
 		float theta = 0.25 * push.time;
 		mat2 rotato = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
@@ -161,21 +176,21 @@ float distanceEstimator(vec3 t)
 			s *= k;
 			scale *= k;
 
-			orbitTrap.x = min(orbitTrap.x, length(s/1.5 - push.reactiveBass)/2.0);
-			orbitTrap.y = min(orbitTrap.y, length(s/1.5 - push.reactiveMids)/2.0);
-			orbitTrap.z = min(orbitTrap.z, length(s/1.5 - push.reactiveHigh)/2.0);
+			orbitTrap.x = min(orbitTrap.x, length(s/3.25 - push.reactiveBass)/1.75);
+			orbitTrap.y = min(orbitTrap.y, length(s/3.25 - push.reactiveMids)/1.75);
+			orbitTrap.z = min(orbitTrap.z, length(s/3.25 - push.reactiveHigh)/1.75);
 		}
 	
 		return (0.25*abs(s.y)/scale) / reScale;
 	}
 	else if(push.deType == 4) {
-		const int maxIterations = 5;
+		const int maxIterations = 4;
 
-		const float reScale = 1.5;
+		const float reScale = 1.4;
 		t *= reScale;
 		vec3 s = t;
 
-		s = vec3(boundReflect(s.x, 8.0), boundReflect(s.y, 8.0), boundReflect(s.z, 8.0));
+		s = vec3(boundReflect(s.x, 7.5), boundReflect(s.y, 7.5), boundReflect(s.z, 7.5));
 
 		s = s + 0.5; //center it by changing position and scale
 		float xx=abs(s.x-0.5)-0.5, yy=abs(s.y-0.5)-0.5, zz=abs(s.z-0.5)-0.5;
@@ -187,9 +202,8 @@ float distanceEstimator(vec3 t)
 
 		orbitTrap.xyz = abs(vec3(xx/1.25, yy/1.25, zz/1.25));
 
-		float theta = 0.04*push.time;
-		//mat3 rotato = buildRot3(normalize(vec3(1, 2, 2), theta);
-		mat3 rotato = buildRot3(normalize(push.smoothBass), theta);
+		float theta = 0.6*sin(0.175*push.time);
+		mat3 rotato = buildRot3(normalize(push.smoothMids), theta);
 
 		for (int i = 0; i < maxIterations; i++) {
 			p *= mengerScale;
@@ -202,11 +216,10 @@ float distanceEstimator(vec3 t)
 
 			d=max(d,d1); //intersection
 
-			if (i % 2 == 0) {
-				const float rat = 0.645;
-				const float colorScale = 3.85;
-				vec3 q = vec3(xx, yy, zz)/mengerScale;
-				vec3 col = vec3(length(q - push.reactiveBass)/colorScale, length(q - push.reactiveMids)/colorScale, length(q - push.reactiveHigh)/colorScale);
+			if (i % 2 == 1) {
+				const float rat = 0.815;
+				vec3 q = vec3(xx, yy, zz);
+				vec3 col = abs(q/1.25);
 				orbitTrap.xyz = rat*orbitTrap.xyz + (1.0 - rat)*col;
 			}
 
@@ -226,9 +239,9 @@ float distanceEstimator(vec3 t)
 		float r2 = dot(s, s);
 		float DEfactor = 1.0;
 
-		float theta = 0.4*push.time;
+		float theta = 0.3*push.time;
 		mat3 rotato1 = buildRot3(normalize(push.smoothHigh), theta);
-		theta = 0.375*sin(1.5*push.time);
+		theta = 0.375*sin(1.25*push.time);
 		mat3 rotato2 = buildRot3(normalize(push.smoothMids), theta);
 
 		for(int i = 0; i < maxIterations && r2 < 1000.0; i++) {
@@ -305,5 +318,5 @@ void main(void) {
 	vec3 position = rotateByQuaternion(dirZ, push.cameraQuaternion);
 
 	//fragColor = castRay(-2.5 * direction, direction);
-	fragColor = castRay(position, direction);
+	fragColor = castRay(push.deType == 2 ? (-2.5 * direction) : position, direction);
 }

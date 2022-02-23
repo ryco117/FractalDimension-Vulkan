@@ -27,7 +27,7 @@ type EngineRenderer (window: EngineWindow, device: EngineDevice) =
 
             if not (oldSwapchain.CompareSwapFormats swapchain) then
                 // TODO: recreate pipeline layout if new render pass is incompatible
-                raise (System.Exception "Created a new swpachain with an incompatible render pass to the previous")
+                System.Exception "Created a new swpachain with an incompatible render pass to the previous" |> raise
 
     // Add swapchain recreation as handler event to window resizes
     do window.Resize.Add (fun _args -> recreateSwapchain ())

@@ -33,8 +33,8 @@ type NoteRange = Bass | Mids | High
 type Note = {freq: float32; mag: float32}
 
 [<EntryPoint>]
-let main _ =
-    let config = defaultConfig
+let main args =
+    let config = defaultConfigWithArgs args
 
     use window = new EngineWindow (800, 450, "FractalDimension")
     use device = new EngineDevice (window)
@@ -52,17 +52,31 @@ let main _ =
     use stateMutex = new System.Threading.Mutex ()
     let mutable state = AppState.newDefaultState ()
 
-    // Audio Only
-    let mutable lastAngularChange = System.DateTime.UtcNow
-    let previousBass = Array.zeroCreate<NAudio.Dsp.Complex[]> 4
-    let mutable previousBassIndex = 0
-
     // UI Only
     let mutable distanceEstimate = AppState.IFS
 
     use audioOutCapture =
+        // Audio local-state variables
+        let mutable lastAngularChange = System.DateTime.UtcNow
+        let previousBass: NAudio.Dsp.Complex[][] = Array.create 5 Array.empty
+        let mutable previousBassIndex = 0
+
+        // Pre-process audio with scaling factor
+        let scaleSource (complex: NAudio.Dsp.Complex[]) =
+            if config.volumeScale <> 1.f then
+                Array.map (fun (z: NAudio.Dsp.Complex) ->
+                    let mutable c = NAudio.Dsp.Complex ()
+                    c.X <- config.volumeScale * z.X
+                    c.Y <- config.volumeScale * z.Y
+                    c) complex
+            else
+                complex
+
         let onDataAvail samplingRate (complex: NAudio.Dsp.Complex[]) =
             if complex.Length > 0 then
+                // Apply pre-process function
+                let complex = scaleSource complex
+
                 // Define processing helpers
                 let mag (c: NAudio.Dsp.Complex) = sqrt (c.X*c.X + c.Y*c.Y)
                 let freqResolution = samplingRate / float complex.Length
@@ -82,42 +96,45 @@ let main _ =
                     List.toArray (List.rev (getList [] 0 sorted))
 
                 // Convert frequency ranges to array indices
-                let scaleToIndex f = int (round (f / freqResolution))
-                let bassStart = scaleToIndex config.bassStartFreq
-                let bassEnd = scaleToIndex config.bassEndFreq
-                let midsStart = scaleToIndex config.midsStartFreq
-                let midsEnd = scaleToIndex config.midsEndFreq
-                let highStart = scaleToIndex config.highStartFreq
-                let highEnd = scaleToIndex config.highEndFreq
+                let frequencyToIndex f = int (round (f / freqResolution))
+                let bassStart = frequencyToIndex config.bassStartFreq
+                let bassEnd = frequencyToIndex config.bassEndFreq
+                let midsStart = frequencyToIndex config.midsStartFreq
+                let midsEnd = frequencyToIndex config.midsEndFreq
+                let highStart = frequencyToIndex config.highStartFreq
+                let highEnd = frequencyToIndex config.highEndFreq
 
                 // Determine strongest bins from each frequency range (bass/mids/high)
-                let volumeAdjust = Array.map (fun note -> {freq = note.freq; mag = note.mag * config.volumeScale})
                 let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
                 let bassNotes =
                     bassArray
                     |> getStrongest 1 0.2f
-                    |> volumeAdjust
                 let midsNotes =
                     Array.sub complex midsStart (midsEnd - midsStart)
                     |> getStrongest 1 0.2f
-                    |> volumeAdjust
                 let highNotes =
                     Array.sub complex highStart (highEnd - highStart)
                     |> getStrongest 1 0.2f
-                    |> volumeAdjust
                 let volume = 
                     let summer a = Array.sumBy (fun n -> n.mag) a
                     summer bassNotes + summer midsNotes + summer highNotes
 
                 // Resolve isolated notes to locations in 3D space
-                let toWorldSpace {freq = f; mag = _} = CubeFillingCurve.curveToCube (float f)
-                let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) =
+                let toWorldSpace {freq = f; mag = _} (range: NoteRange) =
+                    let x =
+                        let ff = float f
+                        match range with
+                        | Bass -> System.Math.Pow (ff, 0.8)
+                        | Mids -> System.Math.Pow (ff, 0.75)
+                        | High -> System.Math.Pow (ff, 0.6)
+                    CubeFillingCurve.curveToCube x
+                let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) (range: NoteRange) =
                     match Array.tryFind (fun note -> note.mag > minimum) notes with
-                    | Some note -> toWorldSpace note
+                    | Some note -> toWorldSpace note range
                     | None -> defaultPoint
-                let targetBass = pointFromNotes bassNotes config.minimumBass state.targetBass
-                let targetMids = pointFromNotes midsNotes config.minimumMids state.targetMids
-                let targetHigh = pointFromNotes highNotes config.minimumHigh state.targetHigh
+                let targetBass = pointFromNotes bassNotes config.minimumBass state.targetBass Bass
+                let targetMids = pointFromNotes midsNotes config.minimumMids state.targetMids Mids
+                let targetHigh = pointFromNotes highNotes config.minimumHigh state.targetHigh High
 
                 // Update angular velocity on kick
                 let angularVelocity =
@@ -131,17 +148,18 @@ let main _ =
                                     let j =
                                         let j = int (round (x * float32 previousBass[i].Length))
                                         if j >= previousBass[i].Length then previousBass[i].Length - 1 else j
-                                    mag (previousBass[i][j])
+                                    previousBass[i][j] |> mag
                         s / float32 previousBass.Length
-
                     match Array.tryFind (fun note ->
                         note.mag > config.minimumBassForJerk &&
-                        (let t = (System.DateTime.UtcNow - lastAngularChange).TotalSeconds in t > 10. * float(config.minimumBassForJerk / note.mag)) &&
-                        note.mag > 8.f * avgLastBassMag note.freq) bassNotes with
+                        let span = (System.DateTime.UtcNow - lastAngularChange) in span.TotalSeconds > 8. * float(config.minimumBassForJerk / note.mag) &&
+                        note.mag > 6.f * avgLastBassMag note.freq) bassNotes with
                     | Some note ->
                         lastAngularChange <- System.DateTime.UtcNow
-                        let p = Vector3.Normalize (toWorldSpace note)
-                        Vector4 (p.X, p.Y, p.Z, (sqrt volume) * config.autoOrbitJerk)
+                        let p =
+                            toWorldSpace note Bass
+                            |> Vector3.Normalize
+                        Vector4 (p.X, p.Y, p.Z, (System.MathF.Pow (volume, 0.6f)) * config.autoOrbitJerk)
                     | None -> state.angularVelocity
 
                 previousBass[previousBassIndex] <- bassArray
@@ -165,7 +183,7 @@ let main _ =
             time - state.previousFrameTime
             |> float32
 
-        let playTime = state.pushConstants.time + System.MathF.Pow (state.volume, 0.65f) * deltaTime
+        let playTime = state.pushConstants.time + System.MathF.Pow (state.volume, 0.75f) * deltaTime
 
         // Update the rotation amd angular momentum of the camera
         let cameraQuaternion, angularVelocity =
@@ -178,13 +196,13 @@ let main _ =
 
         // Update position of note-vectors
         let interpolateNotePoints (scale: float32) (source: Vector3) (target: Vector3) =
-            let smooth = (1.f - exp (float32 deltaTime / -scale))
+            let smooth = (1.f - exp (deltaTime / -scale))
             source + (target - source) * smooth
-        let interpolateReactives = interpolateNotePoints 2.5f
+        let interpolateReactives = interpolateNotePoints 2.25f
         let reactiveBass = interpolateReactives state.pushConstants.reactiveBass state.targetBass
         let reactiveMids = interpolateReactives state.pushConstants.reactiveMids state.targetMids
         let reactiveHigh = interpolateReactives state.pushConstants.reactiveHigh state.targetHigh
-        let interpolateSmooths = interpolateNotePoints 40.f
+        let interpolateSmooths = interpolateNotePoints 20.f
         let smoothBass = interpolateSmooths state.pushConstants.smoothBass state.targetBass
         let smoothMids = interpolateSmooths state.pushConstants.smoothMids state.targetMids
         let smoothHigh = interpolateSmooths state.pushConstants.smoothHigh state.targetHigh

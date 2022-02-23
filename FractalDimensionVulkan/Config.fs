@@ -17,6 +17,8 @@ along with FractalDimension. If not, see <https://www.gnu.org/licenses/>.
 
 module AppConfig
 
+open CommandLine
+
 type Config = {
     //Audio scaling
     volumeScale: float32
@@ -38,16 +40,32 @@ type Config = {
     
 let defaultConfig = {
     volumeScale = 1.f
-    autoOrbitJerk = 0.18f
+    autoOrbitJerk = 0.17f
 
-    bassStartFreq = 20.
+    bassStartFreq = 50.
     bassEndFreq = 250.
     midsStartFreq = 250.
-    midsEndFreq = 3000.
-    highStartFreq = 3000.
-    highEndFreq = 15000.
+    midsEndFreq = 1200.
+    highStartFreq = 1200.
+    highEndFreq = 10000.
     
-    minimumBass = 0.0075f
-    minimumMids = 0.002f
-    minimumHigh = 0.00075f
-    minimumBassForJerk = 0.0825f}
+    minimumBass = 0.01f
+    minimumMids = 0.005f
+    minimumHigh = 0.0008f
+    minimumBassForJerk = 0.12f}
+
+type CommandLineOptions = {
+    [<Option(shortName = 'v', longName = "volumeScale", Default = 1.f, HelpText = "Factor to multiply the incoming audio signal by. Default: 1.0")>]
+    volumeScale: float32}
+
+let (|Success|Fail|) (result : ParserResult<'a>) =
+    match result with
+    | :? Parsed<'a> as parsed -> Success(parsed.Value)
+    | :? NotParsed<'a> as notParsed -> Fail(notParsed.Errors)
+    | _ -> failwith "invalid parser result"
+
+let defaultConfigWithArgs (args: string[]) =
+    let result = Parser.Default.ParseArguments<CommandLineOptions> args
+    match result with
+    | Success opts -> {defaultConfig with volumeScale = opts.volumeScale}
+    | Fail errs -> System.Exception $"Invalid: %A{args}, Errors: %u{Seq.length errs}" |> raise

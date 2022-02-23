@@ -21,6 +21,14 @@ type EngineWindow (width: int, height: int, title: string) as self =
         let screen = Screen.PrimaryScreen.Bounds
         screen.Width, screen.Height
 
+    do Cursor.Hide ()
+
+    let mutable disposed = false
+    let cleanup () =
+        if not disposed then
+            disposed <- true
+            Cursor.Show ()
+
     member this.CreateWindowSurface (instance: Instance) =
         let info = new Windows.Win32SurfaceCreateInfoKhr  (Hwnd = this.Handle, Hinstance = Process.GetCurrentProcess().Handle)
         instance.CreateWin32SurfaceKHR info
@@ -53,3 +61,6 @@ type EngineWindow (width: int, height: int, title: string) as self =
             match drawFunction with
             | Some drawFunc -> drawFunc ()
             | None -> ()
+
+    interface System.IDisposable with override _.Dispose () = cleanup ()
+    override _.Finalize () = cleanup ()
