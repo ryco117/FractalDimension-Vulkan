@@ -20,7 +20,8 @@ layout (location = 0) in vec2 coord;
 
 layout (location = 0) out vec4 fragColor;
 
-layout (push_constant) uniform Push {
+layout (push_constant) uniform Push
+{
 	vec4 cameraQuaternion;
 	float time;
 	float aspectRatio;
@@ -62,14 +63,18 @@ vec3 rotateByQuaternion(vec3 v, vec4 q)
 	return v + temp+temp;
 }
 
-float bound(float x, float b) {
+float bound(float x, float b)
+{
 	return mod(x + b, 2.0*b) - b;
 }
-float boundReflect(float x, float b) {
+float boundReflect(float x, float b)
+{
 	float r = mod(x + b, 4.0*b);
-	if(r < 2.0*b) {
+	if(r < 2.0*b)
+	{
 		return r - b;
-	} else {
+	} else
+	{
 		return 3.0*b - r;
 	}
 }
@@ -82,7 +87,8 @@ float distanceEstimator(vec3 t)
 
 	//*/
 	// Mandelbox
-	if(push.deType == 1) {
+	if(push.deType == 1)
+	{
 		const int maxIterations = 6;
 		const float reScale = 4.5;
 		t *= reScale;
@@ -92,7 +98,8 @@ float distanceEstimator(vec3 t)
 		float r2 = 1.0;
 		const float maxR2 = 12.0;
 		const float BVR = sqrt(maxR2);
-		for (int i = 0; i < maxIterations; i++) {
+		for (int i = 0; i < maxIterations; i++)
+		{
 			if(s.x>1.0){s.x=2.0-s.x;}else if(s.x<-1.0){s.x=-2.0-s.x;}
 			if(s.y>1.0){s.y=2.0-s.y;}else if(s.y<-1.0){s.y=-2.0-s.y;}
 			if(s.z>1.0){s.z=2.0-s.z;}else if(s.z<-1.0){s.z=-2.0-s.z;}
@@ -118,7 +125,8 @@ float distanceEstimator(vec3 t)
 		return (length(s)-BVR)/abs(DEfactor) / reScale;
 	}
 	// Mandelbulb
-	else if(push.deType == 2) {
+	else if(push.deType == 2)
+	{
 		// Mandelbulb
 		const int maxIterations = 4;
 		const float reScale = 2.25;
@@ -129,9 +137,10 @@ float distanceEstimator(vec3 t)
 		float dr = 1.0;
 		float r = 0.0;
 
-		mat3 colorRotato = buildRot3(normalize(push.smoothMids), 0.75*push.time);
+		mat3 colorRotato = buildRot3(normalize(push.smoothMids), 0.8*push.time);
 
-		for(int i = 0; i < maxIterations; i++) {
+		for(int i = 0; i < maxIterations; i++)
+		{
 			r = length(s);
 			const float b = 1.5;
 			if (r > b) break;
@@ -151,21 +160,25 @@ float distanceEstimator(vec3 t)
 		}
 		return min(0.5*log(r)*r/dr, 3.5) / reScale;
 	}
-	else if(push.deType == 3) {
+	else if(push.deType == 3)
+	{
 		const int maxIterations = 4;
-		const float reScale = 1.5;
-		t *= reScale;
+		const float reScale = 0.45;
+		t = reScale*t;
 		vec3 s = t;
 
-		float anim = 1.12 + 0.12*sin(0.2*push.time);
+		float anim = 1.275 + 0.085*sin(0.5*push.time);
 		float scale = 1.0;
 		float theta = 0.25 * push.time;
-		mat2 rotato = mat2(cos(theta), sin(theta), -sin(theta), cos(theta));
+		float ct = cos(theta);
+		float st = sin(theta);
+		mat2 rotato = mat2(ct, st, -st, ct);
 
 		for(int i = 0; i < maxIterations; i++)
 		{
-			if (i == 2) {
-				s.xz *= rotato;
+			if (i == 2)
+			{
+				s.xy *= rotato;
 			}
 
 			s = -1.0 + 2.0*fract(0.5*s + 0.5);
@@ -176,14 +189,15 @@ float distanceEstimator(vec3 t)
 			s *= k;
 			scale *= k;
 
-			orbitTrap.x = min(orbitTrap.x, length(s/3.25 - push.reactiveBass)/1.75);
-			orbitTrap.y = min(orbitTrap.y, length(s/3.25 - push.reactiveMids)/1.75);
-			orbitTrap.z = min(orbitTrap.z, length(s/3.25 - push.reactiveHigh)/1.75);
+			orbitTrap.x = min(orbitTrap.x, length(s/2.0 - push.reactiveBass)/2.0);
+			orbitTrap.y = min(orbitTrap.y, length(s/2.0 - push.reactiveMids)/2.0);
+			orbitTrap.z = min(orbitTrap.z, length(s/2.0 - push.reactiveHigh)/2.0);
 		}
 	
-		return (0.25*abs(s.y)/scale) / reScale;
+		return (0.25*abs(s.z)/scale) / reScale;
 	}
-	else if(push.deType == 4) {
+	else if(push.deType == 4)
+	{
 		const int maxIterations = 4;
 
 		const float reScale = 1.4;
@@ -202,10 +216,11 @@ float distanceEstimator(vec3 t)
 
 		orbitTrap.xyz = abs(vec3(xx/1.25, yy/1.25, zz/1.25));
 
-		float theta = 0.6*sin(0.175*push.time);
+		float theta = 0.58*sin(0.23*push.time);
 		mat3 rotato = buildRot3(normalize(push.smoothMids), theta);
 
-		for (int i = 0; i < maxIterations; i++) {
+		for (int i = 0; i < maxIterations; i++)
+		{
 			p *= mengerScale;
 			float xa = mod(s.x*p, mengerScale);
 			float ya = mod(s.y*p, mengerScale);
@@ -216,7 +231,8 @@ float distanceEstimator(vec3 t)
 
 			d=max(d,d1); //intersection
 
-			if (i % 2 == 1) {
+			if (i % 2 == 1)
+			{
 				const float rat = 0.815;
 				vec3 q = vec3(xx, yy, zz);
 				vec3 col = abs(q/1.25);
@@ -227,7 +243,8 @@ float distanceEstimator(vec3 t)
 		}
 		return d/reScale;
 	}
-	else if(push.deType == 5) {
+	else if(push.deType == 5)
+	{
 		const int maxIterations = 8;
 		const float scale = 2.0;
 		const float reScale = 1.85;
@@ -241,10 +258,11 @@ float distanceEstimator(vec3 t)
 
 		float theta = 0.3*push.time;
 		mat3 rotato1 = buildRot3(normalize(push.smoothHigh), theta);
-		theta = 0.375*sin(1.25*push.time);
+		theta = 0.37*sin(1.25*push.time);
 		mat3 rotato2 = buildRot3(normalize(push.smoothMids), theta);
 
-		for(int i = 0; i < maxIterations && r2 < 1000.0; i++) {
+		for(int i = 0; i < maxIterations && r2 < 1000.0; i++)
+		{
 			s *= rotato1;
 
 			if(s.x+s.y<0.0){float x1=-s.y;s.y=-s.x;s.x=x1;}
@@ -264,16 +282,19 @@ float distanceEstimator(vec3 t)
 		}
 		return (sqrt(r2) - 2.0) / DEfactor / reScale;
 	}
-	else {
+	else
+	{
 		return 1000.0;
 	}
 }
 
 const float maxBrightness = 1.35;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
-vec4 scaleColor(float distanceRatio, float iterationRatio, vec3 col) {
+vec4 scaleColor(float distanceRatio, float iterationRatio, vec3 col)
+{
 	col *= pow(1.0 - distanceRatio, 1.2) * pow(1.0 - iterationRatio, 3.5);
-	if(dot(col, col) > maxBrightnessR2) {
+	if(dot(col, col) > maxBrightnessR2)
+	{
 		col = maxBrightness*normalize(col);
 	}
 	return vec4(col, 1.0);
@@ -282,17 +303,23 @@ vec4 scaleColor(float distanceRatio, float iterationRatio, vec3 col) {
 vec4 castRay(vec3 position, vec3 direction)
 {
 	const int maxIterations = 150;
-	const float maxDistance = 80.0;
+	const float maxDistance = 60.0;
 	const float hitDistance = epsilon;
-	const float minTravel = 0.1;
+	float minTravel = 0.2;
+	if(push.deType ==  1)
+	{
+		minTravel = minTravel + max(0.0, -0.8*cos(0.15 * push.time));
+	}
 
 	position += minTravel * direction;
 	float travel = minTravel;
-	for(int i = 0; i < maxIterations; i++) {
+	for(int i = 0; i < maxIterations; i++)
+	{
 		float dist = distanceEstimator(position);
 
 		float adjustedHitDistance = hitDistance;
-		if(dist <= adjustedHitDistance) {
+		if(dist <= adjustedHitDistance)
+		{
 			return scaleColor(travel/maxDistance, float(i)/float(maxIterations), orbitTrap.xyz);
 		}
 
@@ -308,15 +335,17 @@ vec4 castRay(vec3 position, vec3 direction)
 	return vec4(0.0, 0.0, 0.0, 1.0);
 }
 
-void main(void) {
+void main(void)
+{
 	const float verticalFov = (pi/2.5) / 2.0;	// Roughly 70 degress vertical FOV
 	const float fovY = tan(verticalFov);
 	float fovX = push.aspectRatio * fovY;
 
-	vec3 direction = -normalize(vec3(coord.x*fovX, -coord.y*fovY, 1.0));
+	vec3 direction = normalize(vec3(coord.x*fovX, -coord.y*fovY, 1.0));
 	direction = rotateByQuaternion(direction, push.cameraQuaternion);
-	vec3 position = rotateByQuaternion(dirZ, push.cameraQuaternion);
+	vec3 position = rotateByQuaternion(-dirZ, push.cameraQuaternion);
 
 	//fragColor = castRay(-2.5 * direction, direction);
-	fragColor = castRay(push.deType == 2 ? (-2.5 * direction) : position, direction);
+	fragColor = castRay(position, direction);
+	//fragColor = castRay(push.deType == 2 ? (-2.5 * direction) : position, direction);
 }

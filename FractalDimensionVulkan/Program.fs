@@ -83,8 +83,7 @@ let main args =
                 let getStrongest maxCount delta (input: NAudio.Dsp.Complex[]) =
                     let fLen = float32 input.Length
                     let arr = Array.init input.Length (fun i -> {freq = (float32 i) / fLen; mag = mag input[i]})
-                    let cmp {freq = _; mag = a} {freq = _; mag = b} = sign (b - a)
-                    let sorted = Array.sortWith cmp arr
+                    let sorted = Array.sortWith (fun {freq = _; mag = a} {freq = _; mag = b} -> sign (b - a)) arr
                     let rec getList acc size (arr: Note[]) =
                         if arr.Length = 0  || size = maxCount then
                             acc
@@ -108,13 +107,13 @@ let main args =
                 let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
                 let bassNotes =
                     bassArray
-                    |> getStrongest 1 0.2f
+                    |> getStrongest 1 0.1f
                 let midsNotes =
                     Array.sub complex midsStart (midsEnd - midsStart)
-                    |> getStrongest 1 0.2f
+                    |> getStrongest 1 0.1f
                 let highNotes =
                     Array.sub complex highStart (highEnd - highStart)
-                    |> getStrongest 1 0.2f
+                    |> getStrongest 1 0.15f
                 let volume = 
                     let summer a = Array.sumBy (fun n -> n.mag) a
                     summer bassNotes + summer midsNotes + summer highNotes
@@ -125,12 +124,12 @@ let main args =
                         let ff = float f
                         match range with
                         | Bass -> System.Math.Pow (ff, 0.8)
-                        | Mids -> System.Math.Pow (ff, 0.75)
-                        | High -> System.Math.Pow (ff, 0.6)
+                        | Mids -> System.Math.Pow (ff, 0.65)
+                        | High -> System.Math.Pow (ff, 0.4)
                     CubeFillingCurve.curveToCube x
                 let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) (range: NoteRange) =
                     match Array.tryFind (fun note -> note.mag > minimum) notes with
-                    | Some note -> toWorldSpace note range
+                    | Some note -> ((1.f - minimum / note.mag) / (1.f - minimum)) * toWorldSpace note range
                     | None -> defaultPoint
                 let targetBass = pointFromNotes bassNotes config.minimumBass state.targetBass Bass
                 let targetMids = pointFromNotes midsNotes config.minimumMids state.targetMids Mids
@@ -153,13 +152,13 @@ let main args =
                     match Array.tryFind (fun note ->
                         note.mag > config.minimumBassForJerk &&
                         let span = (System.DateTime.UtcNow - lastAngularChange) in span.TotalSeconds > 8. * float(config.minimumBassForJerk / note.mag) &&
-                        note.mag > 6.f * avgLastBassMag note.freq) bassNotes with
+                        note.mag > 5.f * avgLastBassMag note.freq) bassNotes with
                     | Some note ->
                         lastAngularChange <- System.DateTime.UtcNow
                         let p =
                             toWorldSpace note Bass
                             |> Vector3.Normalize
-                        Vector4 (p.X, p.Y, p.Z, (System.MathF.Pow (volume, 0.6f)) * config.autoOrbitJerk)
+                        Vector4 (p.X, p.Y, p.Z, (sqrt volume) * config.autoOrbitJerk)
                     | None -> state.angularVelocity
 
                 previousBass[previousBassIndex] <- bassArray
@@ -202,7 +201,7 @@ let main args =
         let reactiveBass = interpolateReactives state.pushConstants.reactiveBass state.targetBass
         let reactiveMids = interpolateReactives state.pushConstants.reactiveMids state.targetMids
         let reactiveHigh = interpolateReactives state.pushConstants.reactiveHigh state.targetHigh
-        let interpolateSmooths = interpolateNotePoints 20.f
+        let interpolateSmooths = interpolateNotePoints 17.f
         let smoothBass = interpolateSmooths state.pushConstants.smoothBass state.targetBass
         let smoothMids = interpolateSmooths state.pushConstants.smoothMids state.targetMids
         let smoothHigh = interpolateSmooths state.pushConstants.smoothHigh state.targetHigh

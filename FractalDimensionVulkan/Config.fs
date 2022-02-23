@@ -40,7 +40,7 @@ type Config = {
     
 let defaultConfig = {
     volumeScale = 1.f
-    autoOrbitJerk = 0.17f
+    autoOrbitJerk = 0.175f
 
     bassStartFreq = 50.
     bassEndFreq = 250.
@@ -50,12 +50,12 @@ let defaultConfig = {
     highEndFreq = 10000.
     
     minimumBass = 0.01f
-    minimumMids = 0.005f
-    minimumHigh = 0.0008f
-    minimumBassForJerk = 0.12f}
+    minimumMids = 0.0075f
+    minimumHigh = 0.001f
+    minimumBassForJerk = 0.1f}
 
 type CommandLineOptions = {
-    [<Option(shortName = 'v', longName = "volumeScale", Default = 1.f, HelpText = "Factor to multiply the incoming audio signal by. Default: 1.0")>]
+    [<Option(shortName = 'v', longName = "volumeScale", Default = 1.f, HelpText = "Factor to multiply the incoming audio signal by.")>]
     volumeScale: float32}
 
 let (|Success|Fail|) (result : ParserResult<'a>) =

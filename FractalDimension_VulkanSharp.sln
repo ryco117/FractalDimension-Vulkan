@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32210.308
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FractalDimensionVulkan", "FractalDimensionVulkan\FractalDimensionVulkan.fsproj", "{6390B23B-DACF-45CB-B952-B4AA72718B67}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FractalDimensionVulkan", "FractalDimensionVulkan\FractalDimensionVulkan.fsproj", "{6390B23B-DACF-45CB-B952-B4AA72718B67}"
 	ProjectSection(ProjectDependencies) = postProject
 		{15253E36-DDDE-4C0A-9A6E-7632BACC8F7C} = {15253E36-DDDE-4C0A-9A6E-7632BACC8F7C}
 		{9E914493-2F70-4F34-8BD5-48185663EC03} = {9E914493-2F70-4F34-8BD5-48185663EC03}
@@ -14,6 +14,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vulkan.Windows", "VulkanSharp\src\Platforms\Windows\Vulkan.Windows.csproj", "{9E914493-2F70-4F34-8BD5-48185663EC03}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generator", "VulkanSharp\tools\Generator\Generator.csproj", "{09F60593-810A-491C-84FB-A9848A182E6D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4E7685B3-314A-443C-827E-6962BC83F59C}"
+	ProjectSection(SolutionItems) = preProject
+		COPYING = COPYING
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
