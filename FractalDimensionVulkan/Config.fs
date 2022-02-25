@@ -40,9 +40,9 @@ type Config = {
     
 let defaultConfig = {
     volumeScale = 1.f
-    autoOrbitJerk = 0.175f
+    autoOrbitJerk = 0.17f
 
-    bassStartFreq = 50.
+    bassStartFreq = 40.
     bassEndFreq = 250.
     midsStartFreq = 250.
     midsEndFreq = 1200.

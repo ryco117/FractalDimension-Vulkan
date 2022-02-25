@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FractalDimensionVulkan": {
+      "commandName": "Project",
+      "commandLineArgs": "-v 2.75"
+    }
+  }
+}

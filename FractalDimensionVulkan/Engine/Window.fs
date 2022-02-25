@@ -2,8 +2,19 @@
 
 open System.Diagnostics
 open System.Windows.Forms
+open System.Runtime.InteropServices;
+
 open Vulkan
 open Vulkan.Windows
+
+[<DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl)>]
+extern nativeint GetConsoleWindow ()
+
+[<DllImport("user32.dll", CallingConvention = CallingConvention.Cdecl)>]
+extern bool ShowWindow (nativeint hWnd, int nCmdShow)
+
+let SW_HIDE = 0
+let SW_SHOW = 5
 
 type EngineWindow (width: int, height: int, title: string) as self =
     inherit Form (Text = title, Size = System.Drawing.Size (width, height), FormBorderStyle = FormBorderStyle.Sizable)
@@ -21,6 +32,7 @@ type EngineWindow (width: int, height: int, title: string) as self =
         let screen = Screen.PrimaryScreen.Bounds
         screen.Width, screen.Height
 
+    // TODO: Hide/Show cursor on a timer
     do Cursor.Hide ()
 
     let mutable disposed = false

@@ -21,10 +21,10 @@ open System.Numerics
 
 // Fractal Types?!?!
 type DistanceEstimate =
-    None | Mandelbox | Mandelbulb | Klienian | Menger | IFS with
+    InfiniteDistance | Mandelbox | Mandelbulb | Klienian | Menger | IFS with
     member self.ToInt (): int32 =
         match self with
-        | None -> 0
+        | InfiniteDistance -> 0
         | Mandelbox -> 1
         | Mandelbulb -> 2
         | Klienian -> 3
@@ -48,6 +48,9 @@ type PushConstantData = {
 
     [<System.Runtime.InteropServices.FieldOffset 24>]
     deIntType: int32
+
+    [<System.Runtime.InteropServices.FieldOffset 28>]
+    kaleido: float32
 
     // Reactive locations
     [<System.Runtime.InteropServices.FieldOffset 32>]
@@ -75,6 +78,7 @@ let internal defaultPushConstants = {
     time = 0.f
     aspectRatio = 16.f/9.f
     deIntType = DistanceEstimate.IFS.ToInt ()
+    kaleido = 0.f
     
     reactiveBass = Vector3.UnitX
     reactiveMids = Vector3.UnitX
@@ -128,7 +132,6 @@ type State = {
     previousFrameTime: float
     
     // Audio
-    audioResponsive: bool
     volume: float32
     targetBass: Vector3
     targetMids: Vector3
@@ -142,8 +145,46 @@ let newDefaultState () = {
     upTime = System.Diagnostics.Stopwatch.StartNew ()
     previousFrameTime = 0.
 
-    audioResponsive = true
     volume = 0.0001f
     targetBass = Vector3.Zero
     targetMids = Vector3.Zero
     targetHigh = Vector3.Zero}
+
+type AudioState = {
+    // Audio local-state variables
+    lastAngularChange: System.DateTime
+    previousBass: NAudio.Dsp.Complex[][]
+    previousBassIndex: int}
+
+type UserInterfaceState = {
+    distanceEstimate: DistanceEstimate
+    audioResponsive: bool
+    kaleidoscope: float32 option * bool}
+
+type AtomicState () =
+    let stateMutex = new System.Threading.Mutex ()
+    let mutable state = newDefaultState ()
+
+    let mutable audioOnly = {
+        lastAngularChange = System.DateTime.UtcNow
+        previousBass = Array.create 5 Array.empty
+        previousBassIndex = 0}
+
+    let mutable userInterfaceOnly = {
+        distanceEstimate = IFS
+        audioResponsive = true
+        kaleidoscope = None, false}
+
+    member _.AcquireLock () = stateMutex.WaitOne () |> ignore
+    member _.ReleaseLock () = stateMutex.ReleaseMutex ()
+    member _.State
+        with get () = state 
+        and set state' = state <- state'
+
+    member _.AudioOnlyState
+        with get () = audioOnly
+        and set audio' = audioOnly <- audio'
+
+    member _.UserInterfaceOnlyState
+        with get () = userInterfaceOnly
+        and set audio' = userInterfaceOnly <- audio'

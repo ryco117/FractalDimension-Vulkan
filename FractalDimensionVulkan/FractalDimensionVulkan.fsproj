@@ -11,11 +11,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OtherFlags>/warnon:1182 /warnon:3366 /warnon:52 --warnaserror+:193,1182</OtherFlags>
+    <OtherFlags>/warnon:1182 /warnon:3366 /warnon:52 --warnaserror+:0193,1182,0025</OtherFlags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OtherFlags>/warnon:1182 /warnon:3366 /warnon:52 --warnaserror+:193,1182</OtherFlags>
+    <OtherFlags>/warnon:1182 /warnon:3366 /warnon:52 --warnaserror+:0193,1182,0025</OtherFlags>
   </PropertyGroup>
 
   <ItemGroup>
