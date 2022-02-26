@@ -20,9 +20,12 @@ module AppConfig
 open CommandLine
 
 type Config = {
+    // Visual Properties
+    autoOrbitJerk: float32
+    kaleidoscopeSpeed: float32
+
     //Audio scaling
     volumeScale: float32
-    autoOrbitJerk: float32
 
     // Frequency ranges
     bassStartFreq: float
@@ -39,15 +42,17 @@ type Config = {
     minimumBassForJerk: float32}
     
 let defaultConfig = {
-    volumeScale = 1.f
     autoOrbitJerk = 0.17f
+    kaleidoscopeSpeed = 0.75f
+
+    volumeScale = 1.f
 
     bassStartFreq = 40.
-    bassEndFreq = 250.
-    midsStartFreq = 250.
+    bassEndFreq = 150.
+    midsStartFreq = 150.
     midsEndFreq = 1200.
     highStartFreq = 1200.
-    highEndFreq = 10000.
+    highEndFreq = 12000.
     
     minimumBass = 0.01f
     minimumMids = 0.0075f

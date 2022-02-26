@@ -124,9 +124,9 @@ let main args =
                     let x =
                         let ff = float f
                         match range with
-                        | Bass -> System.Math.Pow (ff, 0.85)
-                        | Mids -> System.Math.Pow (ff, 0.75)
-                        | High -> System.Math.Pow (ff, 0.5)
+                        | Bass -> System.Math.Pow (ff, 0.9)
+                        | Mids -> System.Math.Pow (ff, 0.8)
+                        | High -> System.Math.Pow (ff, 0.6)
                     CubeFillingCurve.curveToCube x
                 let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) (range: NoteRange) volume =
                     if volume = 0.f then
@@ -186,6 +186,8 @@ let main args =
 
     // Create and set Update function
     let updateStateFunc () =
+        let userState = atomicState.UserInterfaceOnlyState
+
         atomicState.AcquireLock ()
         let state = atomicState.State
         let time = state.upTime.Elapsed.TotalSeconds
@@ -212,24 +214,25 @@ let main args =
         let reactiveBass = interpolateReactives state.pushConstants.reactiveBass state.targetBass
         let reactiveMids = interpolateReactives state.pushConstants.reactiveMids state.targetMids
         let reactiveHigh = interpolateReactives state.pushConstants.reactiveHigh state.targetHigh
-        let interpolateSmooths = interpolateNotePoints 17.5f
+        let interpolateSmooths = interpolateNotePoints 18.5f
         let smoothBass = interpolateSmooths state.pushConstants.smoothBass state.targetBass
         let smoothMids = interpolateSmooths state.pushConstants.smoothMids state.targetMids
         let smoothHigh = interpolateSmooths state.pushConstants.smoothHigh state.targetHigh
 
         // Update animation for kaleidoscope effect
         let kaleido, kaleidoAnimationState =
-            match atomicState.UserInterfaceOnlyState.kaleidoscope with
+            let omega = config.kaleidoscopeSpeed
+            match userState.kaleidoscope with
             | None, true -> 1.f, Inanimate
             | None, false -> 0.f, Inanimate
             | Some k, true ->
                 let tmp =
-                    k + 0.6f * deltaTime * System.MathF.Pow (state.volume, 0.7f)
+                    k + omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
                     |> min 1.f
                 tmp, if tmp = 1.f then Complete true else Animating true
             | Some k, false ->
                 let tmp =
-                    k - 0.6f * deltaTime * System.MathF.Pow (state.volume, 0.7f)
+                    k - omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
                     |> max 0.f
                 tmp, if tmp = 0.f then Complete false else Animating false
 
@@ -237,17 +240,32 @@ let main args =
         let pushConstants = {
             state.pushConstants with 
                 cameraQuaternion = cameraQuaternion; time = playTime; aspectRatio = renderer.AspectRatio
-                deIntType = atomicState.UserInterfaceOnlyState.distanceEstimate.ToInt (); kaleido = kaleido
+                deIntType = userState.distanceEstimate.ToInt (); kaleido = System.MathF.Pow (kaleido, 0.675f)
                 reactiveBass = reactiveBass; reactiveMids = reactiveMids; reactiveHigh = reactiveHigh
                 smoothBass = smoothBass; smoothMids = smoothMids; smoothHigh = smoothHigh}
 
         atomicState.State <- {state with pushConstants = pushConstants; angularVelocity = angularVelocity; previousFrameTime = time}
         atomicState.ReleaseLock ()
 
-        match kaleidoAnimationState with
-        | Complete dir -> atomicState.UserInterfaceOnlyState <- {atomicState.UserInterfaceOnlyState with kaleidoscope = None, dir}
-        | Animating dir -> atomicState.UserInterfaceOnlyState <- {atomicState.UserInterfaceOnlyState with kaleidoscope = Some kaleido, dir}
-        | Inanimate -> ()
+        // Update kaleidoscope state with new calculation
+        let newKaleidoscope =
+            match kaleidoAnimationState with
+            | Complete dir -> None, dir
+            | Animating dir -> Some kaleido, dir
+            | Inanimate -> userState.kaleidoscope
+
+        let newLastMove =
+            match userState.lastMouseMovement with
+            | x, y, lastMove, false ->
+                if (System.DateTime.UtcNow - lastMove).TotalSeconds > 2. then
+                    Cursor.Hide ()
+                    x, y, lastMove, true
+                else
+                    x, y, lastMove, false
+            | lastMouseMovement -> lastMouseMovement
+
+
+        atomicState.UserInterfaceOnlyState <- {userState with kaleidoscope = newKaleidoscope; lastMouseMovement = newLastMove}
 
         // Check if audio capture has finished
         if atomicState.UserInterfaceOnlyState.audioResponsive && audioOutCapture.Stopped () then
@@ -270,7 +288,7 @@ let main args =
         window.Invalidate ()    // Windows.Forms method to request another redraw
     window.DrawFunction <- Some drawFunc
 
-    let handleKeyDown (args: KeyEventArgs) =
+    fun (args: KeyEventArgs) ->
         let userState = atomicState.UserInterfaceOnlyState
         match args.KeyCode with
         | Keys.Escape -> exit 0
@@ -305,7 +323,15 @@ let main args =
                                 | None, dir -> Some (if dir then 1.f else 0.f), not dir
                                 | Some k, dir  -> Some k, not dir}
         | _ -> ()
-    window.KeyDown.Add handleKeyDown
+    |> window.KeyDown.Add
+
+    fun (args: MouseEventArgs) ->
+        let userState = atomicState.UserInterfaceOnlyState
+        let x, y, _, hidden = userState.lastMouseMovement
+        if hidden && (args.X <> x || args.Y <> y) then
+            atomicState.UserInterfaceOnlyState <- {userState with lastMouseMovement = args.X, args.Y, System.DateTime.UtcNow, false}
+            Cursor.Show ()
+    |> window.MouseMove.Add
 
     // If made it here without error, hide the console
     let consoleHwnd = GetConsoleWindow ()

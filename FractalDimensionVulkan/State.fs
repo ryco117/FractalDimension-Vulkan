@@ -159,7 +159,8 @@ type AudioState = {
 type UserInterfaceState = {
     distanceEstimate: DistanceEstimate
     audioResponsive: bool
-    kaleidoscope: float32 option * bool}
+    kaleidoscope: float32 option * bool
+    lastMouseMovement: int * int * System.DateTime * bool}
 
 type AtomicState () =
     let stateMutex = new System.Threading.Mutex ()
@@ -173,7 +174,8 @@ type AtomicState () =
     let mutable userInterfaceOnly = {
         distanceEstimate = IFS
         audioResponsive = true
-        kaleidoscope = None, false}
+        kaleidoscope = None, false
+        lastMouseMovement = 0, 0, System.DateTime.UtcNow, true}
 
     member _.AcquireLock () = stateMutex.WaitOne () |> ignore
     member _.ReleaseLock () = stateMutex.ReleaseMutex ()
