@@ -70,202 +70,200 @@ let main args =
 
         let onDataAvail samplingRate (complex: NAudio.Dsp.Complex[]) =
             if complex.Length > 0 then
-                atomicState.AcquireLock ()
-                let state = atomicState.State
-                let audio = atomicState.AudioOnlyState
+                fun (state: AppState.State) ->
+                    let audio = atomicState.AudioOnlyState
 
-                // Apply pre-process function
-                let complex = scaleSource complex
+                    // Apply pre-process function
+                    let complex = scaleSource complex
 
-                // Define processing helpers
-                let mag (c: NAudio.Dsp.Complex) = sqrt (c.X*c.X + c.Y*c.Y)
-                let freqResolution = samplingRate / float complex.Length
-                let getStrongest maxCount delta (input: NAudio.Dsp.Complex[]) =
-                    let fLen = float32 input.Length
-                    let arr = Array.init input.Length (fun i -> {freq = (float32 i) / fLen; mag = mag input[i]})
-                    let sorted = Array.sortWith (fun {freq = _; mag = a} {freq = _; mag = b} -> sign (b - a)) arr
-                    let rec getList acc size (arr: Note[]) =
-                        if arr.Length = 0  || size = maxCount then
-                            acc
-                        else
-                            let t = arr[0].freq
-                            let remaining, friends = Array.partition (fun {freq = s; mag = _} -> abs (t - s) > delta) arr
-                            let m = Array.fold (fun acc {freq = _; mag = m} -> acc + m) 0.f friends
-                            getList ({freq = t; mag = m}::acc) (size + 1) remaining
-                    List.toArray (List.rev (getList [] 0 sorted))
-
-                // Convert frequency ranges to array indices
-                let frequencyToIndex f = int (round (f / freqResolution))
-                let bassStart = frequencyToIndex config.bassStartFreq
-                let bassEnd = frequencyToIndex config.bassEndFreq
-                let midsStart = frequencyToIndex config.midsStartFreq
-                let midsEnd = frequencyToIndex config.midsEndFreq
-                let highStart = frequencyToIndex config.highStartFreq
-                let highEnd = frequencyToIndex config.highEndFreq
-
-                // Determine strongest bins from each frequency range (bass/mids/high)
-                let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
-                let bassNotes =
-                    bassArray
-                    |> getStrongest 2 0.125f
-                let midsNotes =
-                    Array.sub complex midsStart (midsEnd - midsStart)
-                    |> getStrongest 3 0.1f
-                let highNotes =
-                    Array.sub complex highStart (highEnd - highStart)
-                    |> getStrongest 3 0.1f
-                let bassVolume, midsVolume, highVolume = 
-                    let summer = Array.sumBy (fun n -> n.mag)
-                    summer bassNotes, summer midsNotes, summer highNotes
-                let volume = bassVolume + midsVolume + highVolume
-
-                // Resolve isolated notes to locations in 3D space
-                let toWorldSpace {freq = f; mag = _} (range: NoteRange) =
-                    let x =
-                        let ff = float f
-                        match range with
-                        | Bass -> System.Math.Pow (ff, 0.9)
-                        | Mids -> System.Math.Pow (ff, 0.8)
-                        | High -> System.Math.Pow (ff, 0.6)
-                    CubeFillingCurve.curveToCube x
-                let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) (range: NoteRange) volume =
-                    if volume = 0.f then
-                        defaultPoint
-                    else
-                        let summer note =
-                            if note.mag > minimum then
-                                //((1.f - minimum / note.mag) / (1.f - minimum)) * toWorldSpace note range
-                                (note.mag / volume) * toWorldSpace note range
+                    // Define processing helpers
+                    let mag (c: NAudio.Dsp.Complex) = sqrt (c.X*c.X + c.Y*c.Y)
+                    let freqResolution = samplingRate / float complex.Length
+                    let getStrongest maxCount delta (input: NAudio.Dsp.Complex[]) =
+                        let fLen = float32 input.Length
+                        let arr = Array.init input.Length (fun i -> {freq = (float32 i) / fLen; mag = mag input[i]})
+                        let sorted = Array.sortWith (fun {freq = _; mag = a} {freq = _; mag = b} -> sign (b - a)) arr
+                        let rec getList acc size (arr: Note[]) =
+                            if arr.Length = 0  || size = maxCount then
+                                acc
                             else
-                                (note.mag / volume) * defaultPoint
-                        Array.sumBy summer notes
-                let targetBass = pointFromNotes bassNotes config.minimumBass state.targetBass Bass bassVolume
-                let targetMids = pointFromNotes midsNotes config.minimumMids state.targetMids Mids midsVolume
-                let targetHigh = pointFromNotes highNotes config.minimumHigh state.targetHigh High highVolume
+                                let t = arr[0].freq
+                                let remaining, friends = Array.partition (fun {freq = s; mag = _} -> abs (t - s) > delta) arr
+                                let m = Array.fold (fun acc {freq = _; mag = m} -> acc + m) 0.f friends
+                                getList ({freq = t; mag = m}::acc) (size + 1) remaining
+                        List.toArray (List.rev (getList [] 0 sorted))
 
-                // Update angular velocity on kick
-                let angularVelocity, lastChange =
-                    let avgLastBassMag x =
-                        let mutable s = 0.f
-                        for i = 0 to audio.previousBass.Length - 1 do
-                            s <- s +
-                                if audio.previousBass[i].Length = 0 then
-                                    0.f
+                    // Convert frequency ranges to array indices
+                    let frequencyToIndex f = int (round (f / freqResolution))
+                    let bassStart = frequencyToIndex config.bassStartFreq
+                    let bassEnd = frequencyToIndex config.bassEndFreq
+                    let midsStart = frequencyToIndex config.midsStartFreq
+                    let midsEnd = frequencyToIndex config.midsEndFreq
+                    let highStart = frequencyToIndex config.highStartFreq
+                    let highEnd = frequencyToIndex config.highEndFreq
+
+                    // Determine strongest bins from each frequency range (bass/mids/high)
+                    let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
+                    let bassNotes =
+                        bassArray
+                        |> getStrongest 2 0.125f
+                    let midsNotes =
+                        Array.sub complex midsStart (midsEnd - midsStart)
+                        |> getStrongest 3 0.1f
+                    let highNotes =
+                        Array.sub complex highStart (highEnd - highStart)
+                        |> getStrongest 3 0.1f
+                    let bassVolume, midsVolume, highVolume = 
+                        let summer = Array.sumBy (fun n -> n.mag)
+                        summer bassNotes, summer midsNotes, summer highNotes
+                    let volume = bassVolume + midsVolume + highVolume
+
+                    // Resolve isolated notes to locations in 3D space
+                    let toWorldSpace {freq = f; mag = _} (range: NoteRange) =
+                        let x =
+                            let ff = float f
+                            match range with
+                            | Bass -> System.Math.Pow (ff, 0.9)
+                            | Mids -> System.Math.Pow (ff, 0.8)
+                            | High -> System.Math.Pow (ff, 0.6)
+                        CubeFillingCurve.curveToCube x
+                    let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) (range: NoteRange) volume =
+                        if volume = 0.f then
+                            defaultPoint
+                        else
+                            let summer note =
+                                if note.mag > minimum then
+                                    //((1.f - minimum / note.mag) / (1.f - minimum)) * toWorldSpace note range
+                                    (note.mag / volume) * toWorldSpace note range
                                 else
-                                    let j =
-                                        let j = int (round (x * float32 audio.previousBass[i].Length))
-                                        if j >= audio.previousBass[i].Length then audio.previousBass[i].Length - 1 else j
-                                    audio.previousBass[i][j] |> mag
-                        s / float32 audio.previousBass.Length
-                    match Array.tryFind (fun note ->
-                        note.mag > config.minimumBassForJerk &&
-                        let span = (System.DateTime.UtcNow - audio.lastAngularChange) in span.TotalSeconds > 8. * float(config.minimumBassForJerk / note.mag) &&
-                        note.mag > 5.f * avgLastBassMag note.freq) bassNotes with
-                    | Some note ->
-                        let p =
-                            toWorldSpace note Bass
-                            |> Vector3.Normalize
-                        Vector4 (p.X, p.Y, p.Z, (sqrt volume) * config.autoOrbitJerk), System.DateTime.UtcNow
-                    | None -> state.angularVelocity, audio.lastAngularChange
+                                    (note.mag / volume) * defaultPoint
+                            Array.sumBy summer notes
+                    let targetBass = pointFromNotes bassNotes config.minimumBass state.targetBass Bass bassVolume
+                    let targetMids = pointFromNotes midsNotes config.minimumMids state.targetMids Mids midsVolume
+                    let targetHigh = pointFromNotes highNotes config.minimumHigh state.targetHigh High highVolume
 
-                atomicState.AudioOnlyState <-
-                    {audio with 
-                        lastAngularChange = lastChange
-                        previousBass = Array.mapi (fun i arr -> if i = audio.previousBassIndex then bassArray else arr) audio.previousBass
-                        previousBassIndex = (audio.previousBassIndex + 1) % audio.previousBass.Length}
+                    // Update angular velocity on kick
+                    let angularVelocity, lastChange =
+                        let avgLastBassMag x =
+                            let mutable s = 0.f
+                            for i = 0 to audio.previousBass.Length - 1 do
+                                s <- s +
+                                    if audio.previousBass[i].Length = 0 then
+                                        0.f
+                                    else
+                                        let j =
+                                            let j = int (round (x * float32 audio.previousBass[i].Length))
+                                            if j >= audio.previousBass[i].Length then audio.previousBass[i].Length - 1 else j
+                                        audio.previousBass[i][j] |> mag
+                            s / float32 audio.previousBass.Length
+                        match Array.tryFind (fun note ->
+                            note.mag > config.minimumBassForJerk &&
+                            let span = (System.DateTime.UtcNow - audio.lastAngularChange) in span.TotalSeconds > 8. * float(config.minimumBassForJerk / note.mag) &&
+                            note.mag > 5.f * avgLastBassMag note.freq) bassNotes with
+                        | Some note ->
+                            let p =
+                                toWorldSpace note Bass
+                                |> Vector3.Normalize
+                            Vector4 (p.X, p.Y, p.Z, (sqrt volume) * config.autoOrbitJerk), System.DateTime.UtcNow
+                        | None -> state.angularVelocity, audio.lastAngularChange
 
-                // Update state
-                atomicState.State <- {state with angularVelocity = angularVelocity; volume = volume; targetBass = targetBass; targetMids = targetMids; targetHigh = targetHigh}
-                atomicState.ReleaseLock ()
+                    atomicState.AudioOnlyState <-
+                        {audio with 
+                            lastAngularChange = lastChange
+                            previousBass = Array.mapi (fun i arr -> if i = audio.previousBassIndex then bassArray else arr) audio.previousBass
+                            previousBassIndex = (audio.previousBassIndex + 1) % audio.previousBass.Length}
+
+                    // Update state
+                    {state with angularVelocity = angularVelocity; volume = volume; targetBass = targetBass; targetMids = targetMids; targetHigh = targetHigh}
+                |> atomicState.SetState
 
         let onClose () =
-            atomicState.AcquireLock ()
-            atomicState.State <- {atomicState.State with volume = 0.0001f}
-            atomicState.ReleaseLock ()
+            fun (state: AppState.State) ->
+                {state with volume = 0.0001f}
+            |> atomicState.SetState
         new EzSound.AudioOutStreamer (onDataAvail, onClose)
 
     // Create and set Update function
     let updateStateFunc () =
         let userState = atomicState.UserInterfaceOnlyState
 
-        atomicState.AcquireLock ()
-        let state = atomicState.State
-        let time = state.upTime.Elapsed.TotalSeconds
-        let deltaTime =
-            time - state.previousFrameTime
-            |> float32
+        fun (state: AppState.State) ->
+            let time = state.upTime.Elapsed.TotalSeconds
+            let deltaTime =
+                time - state.previousFrameTime
+                |> float32
 
-        let playTime = state.pushConstants.time + System.MathF.Pow (state.volume, 0.75f) * deltaTime
+            let playTime = state.pushConstants.time + System.MathF.Pow (state.volume, 0.75f) * deltaTime
 
-        // Update the rotation amd angular momentum of the camera
-        let cameraQuaternion, angularVelocity =
-            let omega = state.angularVelocity
-            let w = omega.W
-            let r =
-                Vector4 (omega.X, omega.Y, omega.Z, w * deltaTime)
-                |> EngineMaths.buildQuaternion
-            Vector4.Normalize (EngineMaths.quaternionMultiply state.pushConstants.cameraQuaternion r), Vector4 (omega.X, omega.Y, omega.Z, w + (AppState.autoOrbitSpeed - w) * (1.f - exp (-deltaTime/2.75f)))
+            // Update the rotation amd angular momentum of the camera
+            let cameraQuaternion, angularVelocity =
+                let omega = state.angularVelocity
+                let w = omega.W
+                let r =
+                    Vector4 (omega.X, omega.Y, omega.Z, w * deltaTime)
+                    |> EngineMaths.buildQuaternion
+                Vector4.Normalize (EngineMaths.quaternionMultiply state.pushConstants.cameraQuaternion r), Vector4 (omega.X, omega.Y, omega.Z, w + (AppState.autoOrbitSpeed - w) * (1.f - exp (-deltaTime/2.75f)))
 
-        // Update position of note-vectors
-        let interpolateNotePoints (scale: float32) (source: Vector3) (target: Vector3) =
-            let smooth = (1.f - exp (deltaTime / -scale))
-            source + (target - source) * smooth
-        let interpolateReactives = interpolateNotePoints 2.25f
-        let reactiveBass = interpolateReactives state.pushConstants.reactiveBass state.targetBass
-        let reactiveMids = interpolateReactives state.pushConstants.reactiveMids state.targetMids
-        let reactiveHigh = interpolateReactives state.pushConstants.reactiveHigh state.targetHigh
-        let interpolateSmooths = interpolateNotePoints 18.5f
-        let smoothBass = interpolateSmooths state.pushConstants.smoothBass state.targetBass
-        let smoothMids = interpolateSmooths state.pushConstants.smoothMids state.targetMids
-        let smoothHigh = interpolateSmooths state.pushConstants.smoothHigh state.targetHigh
+            // Update position of note-vectors
+            let interpolateNotePoints (scale: float32) (source: Vector3) (target: Vector3) =
+                let smooth = (1.f - exp (deltaTime / -scale))
+                source + (target - source) * smooth
+            let interpolateReactives = interpolateNotePoints 2.25f
+            let reactiveBass = interpolateReactives state.pushConstants.reactiveBass state.targetBass
+            let reactiveMids = interpolateReactives state.pushConstants.reactiveMids state.targetMids
+            let reactiveHigh = interpolateReactives state.pushConstants.reactiveHigh state.targetHigh
+            let interpolateSmooths = interpolateNotePoints 18.5f
+            let smoothBass = interpolateSmooths state.pushConstants.smoothBass state.targetBass
+            let smoothMids = interpolateSmooths state.pushConstants.smoothMids state.targetMids
+            let smoothHigh = interpolateSmooths state.pushConstants.smoothHigh state.targetHigh
 
-        // Update animation for kaleidoscope effect
-        let kaleido, kaleidoAnimationState =
-            let omega = config.kaleidoscopeSpeed
-            match userState.kaleidoscope with
-            | None, true -> 1.f, Inanimate
-            | None, false -> 0.f, Inanimate
-            | Some k, true ->
-                let tmp =
-                    k + omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
-                    |> min 1.f
-                tmp, if tmp = 1.f then Complete true else Animating true
-            | Some k, false ->
-                let tmp =
-                    k - omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
-                    |> max 0.f
-                tmp, if tmp = 0.f then Complete false else Animating false
+            // Update animation for kaleidoscope effect
+            let kaleido, kaleidoAnimationState =
+                let omega = config.kaleidoscopeSpeed
+                match userState.kaleidoscope with
+                | None, true -> 1.f, Inanimate
+                | None, false -> 0.f, Inanimate
+                | Some k, true ->
+                    let tmp =
+                        k + omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
+                        |> min 1.f
+                    tmp, if tmp = 1.f then Complete true else Animating true
+                | Some k, false ->
+                    let tmp =
+                        k - omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
+                        |> max 0.f
+                    tmp, if tmp = 0.f then Complete false else Animating false
 
-        // Update push constants
-        let pushConstants = {
-            state.pushConstants with 
-                cameraQuaternion = cameraQuaternion; time = playTime; aspectRatio = renderer.AspectRatio
-                deIntType = userState.distanceEstimate.ToInt (); kaleido = System.MathF.Pow (kaleido, 0.675f)
-                reactiveBass = reactiveBass; reactiveMids = reactiveMids; reactiveHigh = reactiveHigh
-                smoothBass = smoothBass; smoothMids = smoothMids; smoothHigh = smoothHigh}
+            // Update kaleidoscope state with new calculation
+            let newKaleidoscope =
+                match kaleidoAnimationState with
+                | Complete dir -> None, dir
+                | Animating dir -> Some kaleido, dir
+                | Inanimate -> userState.kaleidoscope
 
-        atomicState.State <- {state with pushConstants = pushConstants; angularVelocity = angularVelocity; previousFrameTime = time}
-        atomicState.ReleaseLock ()
+            // Update mouse visibility state
+            let newLastMove =
+                match userState.lastMouseMovement with
+                | x, y, lastMove, false ->
+                    if (System.DateTime.UtcNow - lastMove).TotalSeconds > 2. then
+                        Cursor.Hide ()
+                        x, y, lastMove, true
+                    else
+                        x, y, lastMove, false
+                | lastMouseMovement -> lastMouseMovement
 
-        // Update kaleidoscope state with new calculation
-        let newKaleidoscope =
-            match kaleidoAnimationState with
-            | Complete dir -> None, dir
-            | Animating dir -> Some kaleido, dir
-            | Inanimate -> userState.kaleidoscope
+            atomicState.UserInterfaceOnlyState <- {userState with kaleidoscope = newKaleidoscope; lastMouseMovement = newLastMove}
 
-        let newLastMove =
-            match userState.lastMouseMovement with
-            | x, y, lastMove, false ->
-                if (System.DateTime.UtcNow - lastMove).TotalSeconds > 2. then
-                    Cursor.Hide ()
-                    x, y, lastMove, true
-                else
-                    x, y, lastMove, false
-            | lastMouseMovement -> lastMouseMovement
+            // Update push constants
+            let pushConstants = {
+                state.pushConstants with 
+                    cameraQuaternion = cameraQuaternion; time = playTime; aspectRatio = renderer.AspectRatio
+                    deIntType = userState.distanceEstimate.ToInt (); kaleido = System.MathF.Pow (kaleido, 0.675f)
+                    reactiveBass = reactiveBass; reactiveMids = reactiveMids; reactiveHigh = reactiveHigh
+                    smoothBass = smoothBass; smoothMids = smoothMids; smoothHigh = smoothHigh}
 
-
-        atomicState.UserInterfaceOnlyState <- {userState with kaleidoscope = newKaleidoscope; lastMouseMovement = newLastMove}
+            {state with pushConstants = pushConstants; angularVelocity = angularVelocity; previousFrameTime = time}
+        |> atomicState.SetState
 
         // Check if audio capture has finished
         if atomicState.UserInterfaceOnlyState.audioResponsive && audioOutCapture.Stopped () then
@@ -278,9 +276,10 @@ let main args =
             updateStateFunc ()
 
             renderer.BeginSwapchainRenderPass commandBuffer
-            atomicState.AcquireLock ()
-            renderSystem.RenderGameObjects commandBuffer atomicState.State
-            atomicState.ReleaseLock ()
+
+            renderSystem.RenderGameObjects commandBuffer
+            |> atomicState.UseState
+
             renderer.EndSwapchainRenderPass commandBuffer
             renderer.EndFrame ()
         | None -> ()
@@ -288,13 +287,13 @@ let main args =
         window.Invalidate ()    // Windows.Forms method to request another redraw
     window.DrawFunction <- Some drawFunc
 
+    // Handle key events for user input
     fun (args: KeyEventArgs) ->
         let userState = atomicState.UserInterfaceOnlyState
         match args.KeyCode with
         | Keys.Escape -> exit 0
         | Keys.F11 -> window.ToggleFullscreen ()
         | Keys.R ->
-            atomicState.AcquireLock ()
             let audio = userState.audioResponsive
             if audio then
                 if audioOutCapture.Capturing () then
@@ -303,7 +302,6 @@ let main args =
                 audioOutCapture.Reset ()
 
             atomicState.UserInterfaceOnlyState <- {userState with audioResponsive = not audio}
-            atomicState.ReleaseLock ()
         | Keys.D0 ->
             atomicState.UserInterfaceOnlyState <- {userState with distanceEstimate = AppState.InfiniteDistance}
         | Keys.D1 ->
@@ -325,6 +323,7 @@ let main args =
         | _ -> ()
     |> window.KeyDown.Add
 
+    // Handle mouse movements to accurately show/hide cursor with user activity
     fun (args: MouseEventArgs) ->
         let userState = atomicState.UserInterfaceOnlyState
         let x, y, _, hidden = userState.lastMouseMovement

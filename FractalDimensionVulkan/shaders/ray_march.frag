@@ -84,11 +84,6 @@ float getAngle(vec2 s)
 	}
 }
 
-float bound(float x, float b)
-{
-	return mod(x + b, 2.0*b) - b;
-}
-
 float boundReflect(float x, float b)
 {
 	float r = mod(x + b, 4.0*b);
@@ -274,7 +269,7 @@ float distanceEstimator(vec3 t)
 		const float reScale = 1.5;
 
 		t *= reScale;
-		t = vec3(boundReflect(t.x, 8.5), boundReflect(t.y, 8.5), boundReflect(t.z, 8.5));
+		t = vec3(boundReflect(t.x, 8.0), boundReflect(t.y, 8.0), boundReflect(t.z, 8.0));
 		vec3 s = t;
 		const vec3 center = vec3(sqrt(0.5), sqrt(0.3), sqrt(0.2));
 		float r2 = dot(s, s);

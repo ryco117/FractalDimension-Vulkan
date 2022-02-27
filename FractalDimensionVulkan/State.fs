@@ -176,12 +176,16 @@ type AtomicState () =
         audioResponsive = true
         kaleidoscope = None, false
         lastMouseMovement = 0, 0, System.DateTime.UtcNow, true}
+        
+    member _.SetState (stateFun: State -> State) =
+        stateMutex.WaitOne () |> ignore
+        state <- stateFun state
+        stateMutex.ReleaseMutex ()
 
-    member _.AcquireLock () = stateMutex.WaitOne () |> ignore
-    member _.ReleaseLock () = stateMutex.ReleaseMutex ()
-    member _.State
-        with get () = state 
-        and set state' = state <- state'
+    member _.UseState (stateFun: State -> unit) =
+        stateMutex.WaitOne () |> ignore
+        stateFun state
+        stateMutex.ReleaseMutex ()
 
     member _.AudioOnlyState
         with get () = audioOnly
