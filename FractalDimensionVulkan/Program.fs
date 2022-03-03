@@ -133,7 +133,6 @@ let main args =
                         else
                             let summer note =
                                 if note.mag > minimum then
-                                    //((1.f - minimum / note.mag) / (1.f - minimum)) * toWorldSpace note range
                                     (note.mag / volume) * toWorldSpace note range
                                 else
                                     (note.mag / volume) * defaultPoint
@@ -173,7 +172,7 @@ let main args =
                             previousBass = Array.mapi (fun i arr -> if i = audio.previousBassIndex then bassArray else arr) audio.previousBass
                             previousBassIndex = (audio.previousBassIndex + 1) % audio.previousBass.Length}
 
-                    // Update state
+                    // Return updated state
                     {state with angularVelocity = angularVelocity; volume = volume; targetBass = targetBass; targetMids = targetMids; targetHigh = targetHigh}
                 |> atomicState.SetState
 
@@ -277,9 +276,11 @@ let main args =
 
             renderer.BeginSwapchainRenderPass commandBuffer
 
+            // Use state in 
             renderSystem.RenderGameObjects commandBuffer
             |> atomicState.UseState
 
+            // Finish render pass
             renderer.EndSwapchainRenderPass commandBuffer
             renderer.EndFrame ()
         | None -> ()
@@ -333,14 +334,14 @@ let main args =
     |> window.MouseMove.Add
 
     // If made it here without error, hide the console
-    let consoleHwnd = GetConsoleWindow ()
-    ShowWindow (consoleHwnd, SW_HIDE) |> ignore
+    let consoleHwnd = NativeConsole.GetConsoleWindow ()
+    NativeConsole.ShowWindow (consoleHwnd, NativeConsole.SW_HIDE) |> ignore
 
     // Execute the run-loop
     Application.Run window
 
     // Reshow console just because?
-    ShowWindow (consoleHwnd, SW_SHOW) |> ignore
+    NativeConsole.ShowWindow (consoleHwnd, NativeConsole.SW_SHOW) |> ignore
 
     // When window is closed, wait for Vulkan to be ready for cleanup
     device.Device.WaitIdle ()

@@ -84,7 +84,7 @@ type RenderSystem (device: EngineDevice, initialRenderPass: RenderPass) =
     let createPipeline renderPass =
         let config = {defaultPipelineConfig () with renderPass = renderPass; pipelineLayout = pipelineLayout}
         new EnginePipeline (device, "shaders/quad.vert.spv", "shaders/ray_march.frag.spv", config)
-    let mutable pipeline = createPipeline initialRenderPass
+    let pipeline = createPipeline initialRenderPass
 
     let mutable disposed = false
     let cleanup () =
