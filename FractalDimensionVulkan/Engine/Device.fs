@@ -31,7 +31,7 @@ type EngineDevice (window: EngineWindow) =
     // Create Instance first
     let instance =
         if DEBUG && not (checkValidationLayerSupport ()) then
-            System.Exception "Validation layers requested, but not available!" |> raise
+            failwith "Validation layers requested, but not available!"
         use appInfo =
             let version = Version.Make (1u, 0u, 0u)
             new ApplicationInfo (
@@ -73,7 +73,7 @@ type EngineDevice (window: EngineWindow) =
     let device =
         let devices = instance.EnumeratePhysicalDevices ()
         if devices.Length = 0 then
-            System.Exception "Failed to find GPUs with Vulkan support!" |> raise
+            failwith "Failed to find GPUs with Vulkan support!"
         let requiredExts = Set.ofArray deviceExtensions
         let isDeviceSuitable (device: PhysicalDevice) =
             match findQueueFamilies device with
@@ -88,12 +88,12 @@ type EngineDevice (window: EngineWindow) =
             | _ -> false
         match Array.tryFind isDeviceSuitable devices with
         | Some physicalDevice -> physicalDevice
-        | None -> System.Exception "Failed to find a suitable GPU!" |> raise
+        | None -> failwith "Failed to find a suitable GPU!"
 
     let findPhysicalQueueFamilies () =
         match findQueueFamilies device with
         | Some graphicsIndex, Some presentIndex -> graphicsIndex, presentIndex
-        | _ -> System.Exception "Selected GPU should have graphics and present queue families before this code" |> raise
+        | _ -> failwith "Selected GPU should have graphics and present queue families before this code"
 
     // Determine a Logical Device fourth
     let logicalDevice, graphicsQueue, presentQueue =

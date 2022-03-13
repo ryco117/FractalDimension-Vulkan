@@ -58,8 +58,8 @@ type AudioOutStreamer(onDataAvail, onClose) =
             onDataAvail (float capture.WaveFormat.SampleRate / scale) finalForm
 
     let initCapture () =
-        if capture.WaveFormat.Channels <> 2 then System.Exception "Expects a stereo (dual channel) audio source" |> raise
-        if capture.WaveFormat.Encoding <> WaveFormatEncoding.IeeeFloat then System.Exception "Expects audio source to use IEEE floating points" |> raise
+        if capture.WaveFormat.Channels <> 2 then failwith "Expects a stereo (dual channel) audio source"
+        if capture.WaveFormat.Encoding <> WaveFormatEncoding.IeeeFloat then failwith "Expects audio source to use IEEE floating points"
         bytesPerSample <- capture.WaveFormat.BitsPerSample / 8
         capture.DataAvailable.Add dataAvail
         capture.StartRecording ()

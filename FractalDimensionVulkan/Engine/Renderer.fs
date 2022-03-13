@@ -23,11 +23,11 @@ type EngineRenderer (window: EngineWindow, device: EngineDevice) =
         else
             device.Device.WaitIdle ()
             let oldSwapchain = swapchain
-            swapchain <- new EngineSwapchain (device, oldSwapchain)
+            swapchain <- new EngineSwapchain (device, oldSwapchain = oldSwapchain)
 
             if not (oldSwapchain.CompareSwapFormats swapchain) then
                 // TODO: recreate pipeline layout if new render pass is incompatible
-                System.Exception "Created a new swpachain with an incompatible render pass to the previous" |> raise
+                failwith "Created a new swpachain with an incompatible render pass to the previous"
 
     // Add swapchain recreation as handler event to window resizes
     do window.Resize.Add (fun _args -> recreateSwapchain ())

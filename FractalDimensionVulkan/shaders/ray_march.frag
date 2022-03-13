@@ -131,9 +131,9 @@ float distanceEstimator(vec3 t)
 				DEfactor /= r2;
 			}
 
-			orbitTrap.x = min(orbitTrap.x, length(s/BVR - push.reactiveBass)/2.0);
-			orbitTrap.y = min(orbitTrap.y, length(s/BVR - push.reactiveMids)/2.0);
-			orbitTrap.z = min(orbitTrap.z, length(s/BVR - push.reactiveHigh)/2.0);
+			orbitTrap.x = min(orbitTrap.x, length(s/BVR - push.reactiveBass)/1.9);
+			orbitTrap.y = min(orbitTrap.y, length(s/BVR - push.reactiveMids)/1.9);
+			orbitTrap.z = min(orbitTrap.z, length(s/BVR - push.reactiveHigh)/1.9);
 
 			s = s*mandelboxScale + t;
 			DEfactor = DEfactor*abs(mandelboxScale) + 1.0;
@@ -146,8 +146,8 @@ float distanceEstimator(vec3 t)
 	else if(push.deType == 2)
 	{
 		// Mandelbulb
-		const int maxIterations = 4;
-		const float reScale = 1.9;
+		const int maxIterations = 3;
+		const float reScale = 1.85;
 		t *= reScale;
 		t = vec3(boundReflect(t.x, 9.5), boundReflect(t.y, 9.5), boundReflect(t.z, 9.5));
 		vec3 s = t;
@@ -181,18 +181,18 @@ float distanceEstimator(vec3 t)
 	else if(push.deType == 3)
 	{
 		const int maxIterations = 3;
-		const float reScale = 0.5;
+		const float reScale = 0.65;
 		t = reScale*t;
 		vec3 s = t;
 
-		float anim = 1.275 + 0.085*sin(0.5*push.time);
+		float anim = 1.275 + 0.085*sin(0.475*push.time);
 		float scale = 1.0;
-		float theta = 0.22 * push.time;
+		float theta = 0.21 * push.time;
 		float ct = cos(theta);
 		float st = sin(theta);
 		mat2 rotato = mat2(ct, st, -st, ct);
 
-		mat3 colorRotato = buildRot3(normalize(push.smoothMids), 0.6*push.time);
+		mat3 colorRotato = buildRot3(normalize(push.smoothMids), 0.5*push.time);
 
 		for(int i = 0; i < maxIterations; i++)
 		{
@@ -212,7 +212,8 @@ float distanceEstimator(vec3 t)
 			orbitTrap.xyz = min(orbitTrap.xyz, abs((s - (push.reactiveHigh + push.reactiveBass)/2.0) * colorRotato)/1.25);
 		}
 	
-		return (0.25*abs(s.z)/scale) / reScale;
+		//return (0.25*abs(s.z)/scale) / reScale;
+		return max((0.25*abs(s.z)/scale), dot(t, t)-0.175) / reScale;
 	}
 	else if(push.deType == 4)
 	{
@@ -234,8 +235,8 @@ float distanceEstimator(vec3 t)
 
 		orbitTrap.xyz = abs(vec3(xx/1.25, yy/1.25, zz/1.25));
 
-		float theta = 0.6*sin(0.175*push.time);
-		mat3 rotato = buildRot3(normalize(push.smoothMids), theta);
+		float theta = 0.6*sin(0.1675*push.time);
+		mat3 rotato = buildRot3(normalize(cross(push.smoothBass, push.smoothMids)), theta);
 
 		for (int i = 0; i < maxIterations; i++)
 		{
@@ -266,7 +267,7 @@ float distanceEstimator(vec3 t)
 	{
 		const int maxIterations = 8;
 		const float scale = 2.0;
-		const float reScale = 1.5;
+		const float reScale = 1.45;
 
 		t *= reScale;
 		t = vec3(boundReflect(t.x, 8.0), boundReflect(t.y, 8.0), boundReflect(t.z, 8.0));
@@ -275,9 +276,9 @@ float distanceEstimator(vec3 t)
 		float r2 = dot(s, s);
 		float DEfactor = 1.0;
 
-		float theta = 0.25*push.time;
+		float theta = 0.225*push.time;
 		mat3 rotato1 = buildRot3(normalize(push.smoothHigh), theta);
-		theta = 0.225*sin(0.8*push.time);
+		theta = 0.225*sin(0.75*push.time);
 		mat3 rotato2 = buildRot3(normalize(push.smoothMids), theta);
 
 		for(int i = 0; i < maxIterations && r2 < 1000.0; i++)
@@ -293,9 +294,9 @@ float distanceEstimator(vec3 t)
 			s = scale*s - (scale - 1.0)*center;
 			r2 = dot(s, s);
 
-			orbitTrap.x = min(orbitTrap.x, length(s - push.reactiveBass)/2.0);
-			orbitTrap.y = min(orbitTrap.y, length(s - push.reactiveMids)/2.0);
-			orbitTrap.z = min(orbitTrap.z, length(s - push.reactiveHigh)/2.0);
+			orbitTrap.x = min(orbitTrap.x, length(s - push.reactiveBass)/2.7);
+			orbitTrap.y = min(orbitTrap.y, length(s - push.reactiveMids)/2.7);
+			orbitTrap.z = min(orbitTrap.z, length(s - push.reactiveHigh)/2.7);
 
 			DEfactor *= scale;
 		}
@@ -311,7 +312,7 @@ const float maxBrightness = 1.35;
 const float maxBrightnessR2 = maxBrightness*maxBrightness;
 vec4 scaleColor(float distanceRatio, float iterationRatio, vec3 col)
 {
-	col *= pow(1.0 - distanceRatio, 1.25) * pow(1.0 - iterationRatio, 3.6);
+	col *= pow(1.0 - distanceRatio, 1.25) * pow(1.0 - iterationRatio, 3.75);
 	if(dot(col, col) > maxBrightnessR2)
 	{
 		col = maxBrightness*normalize(col);
@@ -330,28 +331,34 @@ vec4 castRay(vec3 position, vec3 direction, float fovX, float fovY)
 		minTravel = minTravel + max(0.0, -0.75*cos(0.075 * push.time));
 	}
 
+	float lastDistance = maxDistance;
 	position += minTravel * direction;
 	float travel = minTravel;
 	for(int i = 0; i < maxIterations; i++)
 	{
 		float dist = distanceEstimator(position);
 
-		float adjustedHitDistance = hitDistance;
-		if(dist <= adjustedHitDistance)
+		if(dist <= hitDistance)
 		{
-			return scaleColor(travel/maxDistance, float(i)/float(maxIterations), orbitTrap.xyz);
+			float smoothIter = float(i) - (dist - hitDistance)/(dist - lastDistance);
+			return scaleColor(travel/maxDistance, smoothIter/float(maxIterations), orbitTrap.xyz);
 		}
+
+		lastDistance = dist;
 
 		position += (0.99*dist)*direction;
 		travel += dist;
 		if(travel >= maxDistance)
 		{
+			//*
 			vec3 unmodDirection = normalize(vec3(coord.x*fovX, -coord.y*fovY, 1.0));
 			unmodDirection = rotateByQuaternion(unmodDirection, push.cameraQuaternion);
 
 			vec3 sinDir = sin(100.0*unmodDirection);
 			vec3 base = vec3(exp(-3.0*length(sin(pi * push.reactiveBass + 1.0) - sinDir)), exp(-4.0*length(sin(e * push.reactiveMids + 1.3) - sinDir)), exp(-3.0*length(sin(9.6*push.reactiveHigh + 117.69420) - sinDir)));
-			return vec4((push.deType == 0 ? 0.25 : 0.1) * base, 1.0);
+			return vec4((push.deType == 0 ? 0.25 : 0.09) * base, 1.0);
+			/*/
+			break;//*/
 		}
 	}
 	return vec4(0.0, 0.0, 0.0, 1.0);

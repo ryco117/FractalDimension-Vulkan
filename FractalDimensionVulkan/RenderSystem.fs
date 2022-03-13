@@ -54,7 +54,7 @@ type RenderSystem (device: EngineDevice, initialRenderPass: RenderPass) =
                 SetLayouts = [|descriptorSetLayout|])
         match device.Device.AllocateDescriptorSets allocInfo with
         | [|descriptorSet|] -> descriptorSet
-        | _ -> System.Exception "Exactly one descriptor set is expected to be created" |> raise
+        | _ -> failwith "Exactly one descriptor set is expected to be created"
 
     let updateDescriptorSets () =
         use buffInfo =

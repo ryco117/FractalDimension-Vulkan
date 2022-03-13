@@ -21,6 +21,7 @@ open CommandLine
 
 type Config = {
     // Visual Properties
+    launchFullscreen: bool
     autoOrbitJerk: float32
     kaleidoscopeSpeed: float32
 
@@ -44,27 +45,34 @@ type Config = {
 [<Literal>]
 let defaultVolumeScale = 1.f
 
+[<Literal>]
+let defaultLaunchFullscreen = false
+
 let defaultConfig = {
+    launchFullscreen = defaultLaunchFullscreen
     autoOrbitJerk = 0.1675f
-    kaleidoscopeSpeed = 0.75f
+    kaleidoscopeSpeed = 0.9f
 
     volumeScale = defaultVolumeScale
 
-    bassStartFreq = 40.
-    bassEndFreq = 150.
-    midsStartFreq = 150.
-    midsEndFreq = 1200.
-    highStartFreq = 1200.
-    highEndFreq = 12000.
+    bassStartFreq = 30.
+    bassEndFreq = 125.
+    midsStartFreq = 125.
+    midsEndFreq = 1_100.
+    highStartFreq = 1_100.
+    highEndFreq = 15_000.
     
     minimumBass = 0.01f
     minimumMids = 0.0075f
     minimumHigh = 0.001f
-    minimumBassForJerk = 0.1f}
+    minimumBassForJerk = 0.05f}
 
 type CommandLineOptions = {
     [<Option(shortName = 'v', longName = "volumeScale", Default = defaultVolumeScale, HelpText = "Factor to multiply the incoming audio signal by.")>]
-    volumeScale: float32}
+    volumeScale: float32
+    
+    [<Option(shortName = 'f', longName = "launch-fullscreen", Default = defaultLaunchFullscreen, HelpText = "Toggle whether application should launch in fullscreen.")>]
+    launchFullscreen: bool}
 
 let (|Success|Fail|) (result : ParserResult<'a>) =
     match result with
@@ -75,5 +83,5 @@ let (|Success|Fail|) (result : ParserResult<'a>) =
 let defaultConfigWithArgs (args: string[]) =
     let result = Parser.Default.ParseArguments<CommandLineOptions> args
     match result with
-    | Success opts -> {defaultConfig with volumeScale = opts.volumeScale}
-    | Fail errs -> System.Exception $"Invalid: %A{args}, Errors: %u{Seq.length errs}" |> raise
+    | Success opts -> {defaultConfig with volumeScale = opts.volumeScale; launchFullscreen = opts.launchFullscreen}
+    | Fail errs -> failwith $"Invalid: %A{args}, Errors: %u{Seq.length errs}"

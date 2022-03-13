@@ -6,14 +6,15 @@ open EngineDevice
 
 let internal maxFramesInFlight = 3
 
-type EngineSwapchain (device: EngineDevice, ?oldSwapchain: EngineSwapchain) =
+type EngineSwapchain (device: EngineDevice, ?desiredPresentMode: PresentModeKhr, ?oldSwapchain: EngineSwapchain) =
     // Create Swapchain first
     let swapchain, swapchainImageFormat, swapchainExtent =
         let formats, modes, capabilities = device.GetSwapchainSupport ()
         let surfaceFormat = Array.find (fun (format: SurfaceFormatKhr) ->
             format.Format = Format.B8G8R8A8Srgb && format.ColorSpace = ColorSpaceKhr.SrgbNonlinear) formats
         let presentMode =
-            match Array.tryFind (fun (mode: PresentModeKhr) -> mode = PresentModeKhr.Mailbox) modes with
+            let desiredMode = defaultArg desiredPresentMode PresentModeKhr.Fifo
+            match Array.tryFind (fun mode -> mode = desiredMode) modes with
             | Some mode -> mode
             | None -> printfn "Defaulting to V-Sync present mode (FIFO)"; PresentModeKhr.Fifo
         let extent = capabilities.CurrentExtent
@@ -250,14 +251,13 @@ type EngineSwapchain (device: EngineDevice, ?oldSwapchain: EngineSwapchain) =
                 WaitDstStageMask = [|PipelineStageFlags.ColorAttachmentOutput|],
                 CommandBuffers = [|buffer|],
                 SignalSemaphores = signalSemaphores)
-        device.Device.ResetFences [|inFlightFences[currentFrame]|]
+        device.Device.ResetFence inFlightFences[currentFrame]
         device.GraphicsQueue.Submit ([|submitInfo|], inFlightFences[currentFrame])
-        let presentInfo =
-            new PresentInfoKhr (
-                WaitSemaphores = signalSemaphores,
-                Swapchains = [|swapchain|],
-                ImageIndices = [|uint32 imageIndex|])
-        device.PresentQueue.PresentKHR presentInfo
+        new PresentInfoKhr (
+            WaitSemaphores = signalSemaphores,
+            Swapchains = [|swapchain|],
+            ImageIndices = [|uint32 imageIndex|])
+        |> device.PresentQueue.PresentKHR
         currentFrame <- (currentFrame + 1) % maxFramesInFlight
 
     member _.DepthFormat = swapchainDepthFormat

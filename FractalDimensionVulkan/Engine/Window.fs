@@ -7,7 +7,7 @@ open System.Runtime.InteropServices;
 open Vulkan
 open Vulkan.Windows
 
-// Allow win32 api to show hide the default application console
+// Allow Win32 API to show hide the default application console
 module NativeConsole =
     [<DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl)>]
     extern nativeint GetConsoleWindow ()
@@ -38,10 +38,11 @@ type EngineWindow (defaultWidth: int, defaultHeight: int, title: string) as self
     let cleanup () =
         if not disposed then
             disposed <- true
-            Cursor.Show ()  // Probably not necessary, but not significant issue
+            Cursor.Show ()  // Probably not necessary, but API says to call in pairs
 
     // Allow for easy toggling of borderless-fullscreen
     let mutable fullscreen = false
+    member _.IsFullscreen = fullscreen
     member _.ToggleFullscreen () =
         fullscreen <- not fullscreen
         if fullscreen then
@@ -49,7 +50,6 @@ type EngineWindow (defaultWidth: int, defaultHeight: int, title: string) as self
             let width = uint32 displayBounds.Width
             let height = uint32 displayBounds.Height
             self.FormBorderStyle <- FormBorderStyle.None
-            self.WindowState <- FormWindowState.Normal
             self.Extent <- Extent2D (Width = width, Height = height)
             self.Bounds <- displayBounds
         else
@@ -72,10 +72,9 @@ type EngineWindow (defaultWidth: int, defaultHeight: int, title: string) as self
     override _.OnPaintBackground _ = ()
 
     override _.OnPaint _args =
-        if self.Visible then
-            match drawFunction with
-            | Some drawFunc -> drawFunc ()
-            | None -> ()
+        match drawFunction with
+        | Some drawFunc -> drawFunc ()
+        | None -> ()
 
     interface System.IDisposable with override _.Dispose () = cleanup ()
     override _.Finalize () = cleanup ()

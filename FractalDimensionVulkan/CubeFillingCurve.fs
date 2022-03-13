@@ -120,5 +120,5 @@ let curveToCubeN n x =
     match f n x with
     | x, y, z -> System.Numerics.Vector3 (float32 x, float32 y, float32 z)
 
-// Same as `curveToCubeN` but with default depth of 8
-let curveToCube = curveToCubeN 8
+// Same as `curveToCubeN` but with default depth of 5
+let curveToCube = curveToCubeN 5

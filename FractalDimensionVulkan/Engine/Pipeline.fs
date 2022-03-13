@@ -111,7 +111,7 @@ type EnginePipeline(device: EngineDevice, vertPath: string, fragPath: string, co
                 Subpass = config.subpass)
         match device.Device.CreateGraphicsPipelines (null, [|pipelineInfo|]) with
         | [|pipeline|] -> pipeline
-        | _ -> System.Exception "Should exist exactly one graphics pipeline, as requested" |> raise
+        | _ -> failwith "Should exist exactly one graphics pipeline, as requested"
 
     let mutable disposed = false
     let cleanup () =

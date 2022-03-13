@@ -26,4 +26,4 @@ let marshalArrayOfStruct (elementSize: int option) (array: 'a[]) (pointer: nativ
 // Raise given message exception if not success condition
 let assertMessage (message: string) (successCondition: bool) =
     if not successCondition then
-        System.Exception message |> raise
+        failwith message

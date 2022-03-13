@@ -43,6 +43,9 @@ let main args =
     let config = defaultConfigWithArgs args
 
     use window = new EngineWindow (800, 450, "FractalDimension")
+    if config.launchFullscreen then
+        window.ToggleFullscreen ()
+
     use device = new EngineDevice (window)
     use renderer = new EngineRenderer (window, device)
 
@@ -106,13 +109,13 @@ let main args =
                     let bassArray = Array.sub complex bassStart (bassEnd - bassStart)
                     let bassNotes =
                         bassArray
-                        |> getStrongest 2 0.125f
+                        |> getStrongest 2 0.1f
                     let midsNotes =
                         Array.sub complex midsStart (midsEnd - midsStart)
-                        |> getStrongest 3 0.1f
+                        |> getStrongest 3 0.08f
                     let highNotes =
                         Array.sub complex highStart (highEnd - highStart)
-                        |> getStrongest 3 0.1f
+                        |> getStrongest 3 0.08f
                     let bassVolume, midsVolume, highVolume = 
                         let summer = Array.sumBy (fun n -> n.mag)
                         summer bassNotes, summer midsNotes, summer highNotes
@@ -124,8 +127,8 @@ let main args =
                             let ff = float f
                             match range with
                             | Bass -> System.Math.Pow (ff, 0.9)
-                            | Mids -> System.Math.Pow (ff, 0.8)
-                            | High -> System.Math.Pow (ff, 0.6)
+                            | Mids -> System.Math.Pow (ff, 0.75)
+                            | High -> System.Math.Pow (ff, 0.55)
                         CubeFillingCurve.curveToCube x
                     let pointFromNotes (notes: Note[]) (minimum: float32) (defaultPoint: Vector3) (range: NoteRange) volume =
                         if volume = 0.f then
@@ -158,7 +161,7 @@ let main args =
                         match Array.tryFind (fun note ->
                             note.mag > config.minimumBassForJerk &&
                             let span = (System.DateTime.UtcNow - audio.lastAngularChange) in span.TotalSeconds > 8. * float(config.minimumBassForJerk / note.mag) &&
-                            note.mag > 5.f * avgLastBassMag note.freq) bassNotes with
+                            note.mag > 10.f * avgLastBassMag note.freq) bassNotes with
                         | Some note ->
                             let p =
                                 toWorldSpace note Bass
@@ -175,7 +178,6 @@ let main args =
                     // Return updated state
                     {state with angularVelocity = angularVelocity; volume = volume; targetBass = targetBass; targetMids = targetMids; targetHigh = targetHigh}
                 |> atomicState.SetState
-
         let onClose () =
             fun (state: AppState.State) ->
                 {state with volume = 0.0001f}
@@ -185,6 +187,14 @@ let main args =
     // Create and set Update function
     let updateStateFunc () =
         let userState = atomicState.UserInterfaceOnlyState
+
+        (*fun (state: AppState.State) ->
+            let uptime = state.upTime
+            let mutable deltaTime = uptime.Elapsed.TotalSeconds - state.previousFrameTime
+            while deltaTime < 0.005 do
+                System.Threading.Thread.SpinWait 10
+                deltaTime <- uptime.Elapsed.TotalSeconds - state.previousFrameTime
+        |> atomicState.UseState*)
 
         fun (state: AppState.State) ->
             let time = state.upTime.Elapsed.TotalSeconds
@@ -201,17 +211,17 @@ let main args =
                 let r =
                     Vector4 (omega.X, omega.Y, omega.Z, w * deltaTime)
                     |> EngineMaths.buildQuaternion
-                Vector4.Normalize (EngineMaths.quaternionMultiply state.pushConstants.cameraQuaternion r), Vector4 (omega.X, omega.Y, omega.Z, w + (AppState.autoOrbitSpeed - w) * (1.f - exp (-deltaTime/2.75f)))
+                Vector4.Normalize (EngineMaths.quaternionMultiply state.pushConstants.cameraQuaternion r), Vector4 (omega.X, omega.Y, omega.Z, w + (AppState.autoOrbitSpeed - w) * (1.f - exp (-deltaTime/3.f)))
 
             // Update position of note-vectors
             let interpolateNotePoints (scale: float32) (source: Vector3) (target: Vector3) =
                 let smooth = (1.f - exp (deltaTime / -scale))
                 source + (target - source) * smooth
-            let interpolateReactives = interpolateNotePoints 2.25f
+            let interpolateReactives = interpolateNotePoints 2.2f
             let reactiveBass = interpolateReactives state.pushConstants.reactiveBass state.targetBass
             let reactiveMids = interpolateReactives state.pushConstants.reactiveMids state.targetMids
             let reactiveHigh = interpolateReactives state.pushConstants.reactiveHigh state.targetHigh
-            let interpolateSmooths = interpolateNotePoints 18.5f
+            let interpolateSmooths = interpolateNotePoints 24.f
             let smoothBass = interpolateSmooths state.pushConstants.smoothBass state.targetBass
             let smoothMids = interpolateSmooths state.pushConstants.smoothMids state.targetMids
             let smoothHigh = interpolateSmooths state.pushConstants.smoothHigh state.targetHigh
@@ -224,12 +234,12 @@ let main args =
                 | None, false -> 0.f, Inanimate
                 | Some k, true ->
                     let tmp =
-                        k + omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
+                        k + omega * deltaTime * System.MathF.Pow (state.volume, 0.685f)
                         |> min 1.f
                     tmp, if tmp = 1.f then Complete true else Animating true
                 | Some k, false ->
                     let tmp =
-                        k - omega * deltaTime * System.MathF.Pow (state.volume, 0.7f)
+                        k - omega * deltaTime * System.MathF.Pow (state.volume, 0.685f)
                         |> max 0.f
                     tmp, if tmp = 0.f then Complete false else Animating false
 
@@ -238,7 +248,7 @@ let main args =
                 match kaleidoAnimationState with
                 | Complete dir -> None, dir
                 | Animating dir -> Some kaleido, dir
-                | Inanimate -> userState.kaleidoscope
+                | Inanimate -> userState.kaleidoscope 
 
             // Update mouse visibility state
             let newLastMove =
@@ -284,7 +294,6 @@ let main args =
             renderer.EndSwapchainRenderPass commandBuffer
             renderer.EndFrame ()
         | None -> ()
-
         window.Invalidate ()    // Windows.Forms method to request another redraw
     window.DrawFunction <- Some drawFunc
 
@@ -292,7 +301,11 @@ let main args =
     fun (args: KeyEventArgs) ->
         let userState = atomicState.UserInterfaceOnlyState
         match args.KeyCode with
-        | Keys.Escape -> exit 0
+        | Keys.Escape ->
+            if window.IsFullscreen then
+                window.ToggleFullscreen() 
+            else
+                exit 0
         | Keys.F11 -> window.ToggleFullscreen ()
         | Keys.R ->
             let audio = userState.audioResponsive
@@ -301,7 +314,6 @@ let main args =
                     audioOutCapture.StopCapturing ()
             else
                 audioOutCapture.Reset ()
-
             atomicState.UserInterfaceOnlyState <- {userState with audioResponsive = not audio}
         | Keys.D0 ->
             atomicState.UserInterfaceOnlyState <- {userState with distanceEstimate = AppState.InfiniteDistance}
