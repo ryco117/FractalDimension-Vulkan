@@ -42,10 +42,7 @@ type KaleidoscopeAnimationState =
 let main args =
     let config = defaultConfigWithArgs args
 
-    use window = new EngineWindow (800, 450, "FractalDimension")
-    if config.launchFullscreen then
-        window.ToggleFullscreen ()
-
+    use window = new EngineWindow (800, 450, "FractalDimension", config.launchFullscreen)
     use device = new EngineDevice (window)
     use renderer = new EngineRenderer (window, device)
 
@@ -161,7 +158,7 @@ let main args =
                         match Array.tryFind (fun note ->
                             note.mag > config.minimumBassForJerk &&
                             let span = (System.DateTime.UtcNow - audio.lastAngularChange) in span.TotalSeconds > 8. * float(config.minimumBassForJerk / note.mag) &&
-                            note.mag > 10.f * avgLastBassMag note.freq) bassNotes with
+                            note.mag > 8.f * avgLastBassMag note.freq) bassNotes with
                         | Some note ->
                             let p =
                                 toWorldSpace note Bass

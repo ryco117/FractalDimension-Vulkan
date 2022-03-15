@@ -102,7 +102,6 @@ float distanceEstimator(vec3 t)
 {
 	orbitTrap = vec4(1.0, 1.0, 1.0, 1.0);
 
-	//*/
 	// Mandelbox
 	if(push.deType == 1)
 	{
@@ -145,7 +144,6 @@ float distanceEstimator(vec3 t)
 	// Mandelbulb
 	else if(push.deType == 2)
 	{
-		// Mandelbulb
 		const int maxIterations = 3;
 		const float reScale = 1.85;
 		t *= reScale;
@@ -181,11 +179,11 @@ float distanceEstimator(vec3 t)
 	else if(push.deType == 3)
 	{
 		const int maxIterations = 3;
-		const float reScale = 0.65;
+		const float reScale = 0.8;
 		t = reScale*t;
 		vec3 s = t;
 
-		float anim = 1.275 + 0.085*sin(0.475*push.time);
+		float anim = 1.275 + 0.085*sin(0.4*push.time);
 		float scale = 1.0;
 		float theta = 0.21 * push.time;
 		float ct = cos(theta);
@@ -212,8 +210,8 @@ float distanceEstimator(vec3 t)
 			orbitTrap.xyz = min(orbitTrap.xyz, abs((s - (push.reactiveHigh + push.reactiveBass)/2.0) * colorRotato)/1.25);
 		}
 	
-		//return (0.25*abs(s.z)/scale) / reScale;
-		return max((0.25*abs(s.z)/scale), dot(t, t)-0.175) / reScale;
+		//return max((0.25*abs(s.z)/scale), dot(t, t)-0.25) / reScale;
+		return max((0.25*abs(s.z)/scale)/reScale, length(vec3(boundReflect(t.x/reScale, 5.0), boundReflect(t.y/reScale, 5.0), boundReflect(t.z/reScale, 5.0)))-0.62);
 	}
 	else if(push.deType == 4)
 	{
@@ -302,10 +300,8 @@ float distanceEstimator(vec3 t)
 		}
 		return (sqrt(r2) - 2.0) / DEfactor / reScale;
 	}
-	else
-	{
-		return 1000.0;
-	}
+
+	return 1000.0;
 }
 
 const float maxBrightness = 1.35;
@@ -322,7 +318,7 @@ vec4 scaleColor(float distanceRatio, float iterationRatio, vec3 col)
 
 vec4 castRay(vec3 position, vec3 direction, float fovX, float fovY)
 {
-	const int maxIterations = 120;
+	const int maxIterations = 130;
 	const float maxDistance = 50.0;
 	const float hitDistance = epsilon;
 	float minTravel = 0.3;
@@ -350,7 +346,7 @@ vec4 castRay(vec3 position, vec3 direction, float fovX, float fovY)
 		travel += dist;
 		if(travel >= maxDistance)
 		{
-			//*
+			// *
 			vec3 unmodDirection = normalize(vec3(coord.x*fovX, -coord.y*fovY, 1.0));
 			unmodDirection = rotateByQuaternion(unmodDirection, push.cameraQuaternion);
 

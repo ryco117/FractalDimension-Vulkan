@@ -52,7 +52,7 @@ type EngineSwapchain (device: EngineDevice, ?desiredPresentMode: PresentModeKhr,
                 PresentMode = presentMode,
                 Clipped = true,
                 OldSwapchain = match oldSwapchain with Some chain -> chain.Swapchain | None -> null)
-        (device.Device.CreateSwapchainKHR createInfo, surfaceFormat.Format, extent)
+        device.Device.CreateSwapchainKHR createInfo, surfaceFormat.Format, extent
 
     // Step 2: Create Image Views using new swapchain
     let swapchainImages = device.Device.GetSwapchainImagesKHR swapchain
@@ -197,7 +197,7 @@ type EngineSwapchain (device: EngineDevice, ?desiredPresentMode: PresentModeKhr,
     let timeout = System.UInt64.MaxValue
     let aspectRatio = (float32 swapchainExtent.Width) / (float32 swapchainExtent.Height)
 
-    let waitForFence fence = device.Device.WaitForFences ([|fence|], Bool32.op_Implicit true, timeout)
+    let waitForFence fence = device.Device.WaitForFence (fence, Bool32.op_Implicit true, timeout)
 
     let mutable disposed = false
     let cleanup () =

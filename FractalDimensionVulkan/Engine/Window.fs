@@ -18,8 +18,13 @@ module NativeConsole =
     let SW_HIDE = 0
     let SW_SHOW = 5
 
-type EngineWindow (defaultWidth: int, defaultHeight: int, title: string) as self =
-    inherit Form (Text = title, Size = System.Drawing.Size (defaultWidth, defaultHeight), FormBorderStyle = FormBorderStyle.Sizable)
+let internal defaultFullscreen = false
+
+type EngineWindow (defaultWidth: int, defaultHeight: int, title: string, ?launchFullscreenOpt: bool) as self =
+    inherit Form (
+        Text = title,
+        Size = (if Option.defaultValue defaultFullscreen launchFullscreenOpt then Screen.PrimaryScreen.Bounds.Size else System.Drawing.Size (defaultWidth, defaultHeight)),
+        FormBorderStyle = if Option.defaultValue defaultFullscreen launchFullscreenOpt then FormBorderStyle.None else FormBorderStyle.Sizable)
 
     // Ensure user-defined paint-events and set opaque fill
     do self.SetStyle (ControlStyles.UserPaint + ControlStyles.Opaque, true)
@@ -41,7 +46,7 @@ type EngineWindow (defaultWidth: int, defaultHeight: int, title: string) as self
             Cursor.Show ()  // Probably not necessary, but API says to call in pairs
 
     // Allow for easy toggling of borderless-fullscreen
-    let mutable fullscreen = false
+    let mutable fullscreen = Option.defaultValue defaultFullscreen launchFullscreenOpt
     member _.IsFullscreen = fullscreen
     member _.ToggleFullscreen () =
         fullscreen <- not fullscreen
